@@ -1,6 +1,6 @@
 console.log('script.js loaded');
 
-// --- Your real Firebase config ---
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk",
   authDomain: "wackachat.firebaseapp.com",
@@ -15,6 +15,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+let currentUserID = peer.id; // Use the PeerJS ID as a unique identifier for each user
+
 // Initialize PeerJS to your Render server
 const peer = new Peer(undefined, {
   host: 'wackachatv2peerserver.onrender.com', // your Render URL
@@ -26,10 +28,41 @@ const peer = new Peer(undefined, {
 
 let conn, currentCall;
 const messagesDiv = document.getElementById('messages');
+const onlineUsersDiv = document.getElementById('onlineUsers');
 
+// Track online users
+function updateOnlineUsers() {
+  db.ref('users').once('value')
+    .then(snapshot => {
+      const users = snapshot.val();
+      onlineUsersDiv.innerHTML = "<h3>Online Users</h3>";
+      for (const userID in users) {
+        if (users[userID].status === "online") {
+          onlineUsersDiv.innerHTML += `<div>${users[userID].name}</div>`;
+        }
+      }
+    })
+    .catch(err => console.error('Error fetching online users:', err));
+}
+
+// When PeerJS connection is opened
 peer.on('open', id => {
   console.log('Peer opened with ID:', id);
-  db.ref('waiting').push(id);
+  currentUserID = id;
+
+  // Mark user as online in Firebase
+  db.ref('users/' + id).set({
+    name: 'User ' + id,  // You can customize the name as needed
+    status: 'online'
+  });
+
+  // Update the list of online users
+  updateOnlineUsers();
+  
+  // Monitor changes in the 'users' node
+  db.ref('users').on('value', () => {
+    updateOnlineUsers();
+  });
 });
 
 peer.on('call', call => {
@@ -116,3 +149,8 @@ function sendMessage() {
     input.value = '';
   }
 }
+
+// Listen for user disconnect
+window.onbeforeunload = () => {
+  db.ref('users/' + currentUserID).remove();
+};

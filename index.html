@@ -3,215 +3,151 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Wackachat</title>
+  <title>WackaChat</title>
   <style>
     body {
+      font-family: Arial, sans-serif;
       background: #0e0e0e;
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
+      color: #eee;
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 2rem;
     }
-
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-    }
-
-    button {
-      margin: 0.5rem;
-      padding: 0.8rem 1.5rem;
-      border: none;
-      border-radius: 10px;
-      font-weight: bold;
-      color: white;
-      background: linear-gradient(135deg, #007aff, #5856d6);
-      cursor: pointer;
-    }
-
     video {
       width: 300px;
+      height: auto;
+      background: #333;
       margin: 1rem;
-      border-radius: 10px;
     }
-
-    .chat-container {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      max-height: 300px;
-      overflow-y: auto;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 1rem;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      width: 80%;
-      max-width: 600px;
+    textarea {
+      width: 300px;
+      height: 100px;
+      margin: 1rem 0;
+      resize: none;
     }
-
-    .message {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 0.5rem 1rem;
-      border-radius: 10px;
-      max-width: 80%;
-      word-wrap: break-word;
-    }
-
-    .message.me {
-      align-self: flex-end;
-      background: rgba(10, 132, 255, 0.2);
-    }
-
-    .chat-input-group {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 1rem;
-    }
-
-    input {
-      flex: 1;
-      padding: 0.6rem;
-      border-radius: 10px;
-      border: none;
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
+    button {
+      margin: 0.5rem;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-
-  <h1>Wackachat</h1>
-
+  <h1>WackaChat</h1>
+  <video id="localVideo" autoplay muted></video>
+  <video id="remoteVideo" autoplay></video>
+  <textarea id="chatBox" placeholder="Chat here..."></textarea>
   <div>
-    <button onclick="callRandomPeer()">Call Now</button>
-    <button onclick="chatRandomPeer()">Chat Now</button>
+    <button id="callNow">Call Now</button>
+    <button id="chatNow">Chat Now</button>
   </div>
+  <p id="status"></p>
 
-  <div>
-    <video id="localVideo" autoplay muted></video>
-    <video id="remoteVideo" autoplay></video>
-  </div>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-  <div class="chat-container" id="chatBox"></div>
-
-  <div class="chat-input-group">
-    <input id="chatInput" type="text" placeholder="Type a message..." />
-    <button onclick="sendMessage()">Send</button>
-  </div>
-
+  <!-- PeerJS -->
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+
   <script>
     // Firebase Config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DATABASE_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk",
+      authDomain: "wackachat.firebaseapp.com",
+      databaseURL: "https://wackachat-default-rtdb.firebaseio.com",
+      projectId: "wackachat",
+      storageBucket: "wackachat.appspot.com",
+      messagingSenderId: "344884471257",
+      appId: "1:344884471257:web:3d8dfb005128735ae7a5c8",
+      measurementId: "G-MZM4LSXWFG"
     };
 
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // PeerJS
     const peer = new Peer();
-    let conn;
-    let call;
+    let currentCall = null;
+    let conn = null;
+
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const chatBox = document.getElementById('chatBox');
+    const status = document.getElementById('status');
 
     peer.on('open', id => {
-      console.log('My Peer ID:', id);
-      document.title = "ID: " + id;
+      status.innerText = `My Peer ID: ${id}`;
+      db.ref('waiting').push({ id });
     });
 
-    function findPartner(id, type) {
-      const waitingRef = db.ref('waiting');
-      waitingRef.once('value', snapshot => {
-        const data = snapshot.val();
-        let found = false;
-
-        for (let key in data) {
-          if (data[key] !== id) {
-            startConnection(data[key], type);
-            db.ref('waiting/' + key).remove();
-            found = true;
-            break;
-          }
-        }
-
-        if (!found) {
-          const newKey = waitingRef.push().key;
-          waitingRef.child(newKey).set(id);
-        }
-      });
-    }
-
-    function callRandomPeer() {
-      findPartner(peer.id, 'video');
-    }
-
-    function chatRandomPeer() {
-      findPartner(peer.id, 'chat');
-    }
-
-    function startConnection(partnerId, type) {
-      conn = peer.connect(partnerId);
-      conn.on('open', () => {
-        conn.on('data', data => {
-          displayMessage(data, false);
-        });
-      });
-
-      if (type === 'video') {
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-          document.getElementById('localVideo').srcObject = stream;
-          call = peer.call(partnerId, stream);
-          call.on('stream', remoteStream => {
-            document.getElementById('remoteVideo').srcObject = remoteStream;
-          });
-        });
-      }
-    }
-
-    peer.on('connection', connection => {
-      conn = connection;
-      conn.on('data', data => {
-        displayMessage(data, false);
-      });
-    });
-
-    peer.on('call', incomingCall => {
+    peer.on('call', call => {
       navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-        document.getElementById('localVideo').srcObject = stream;
-        incomingCall.answer(stream);
-        incomingCall.on('stream', remoteStream => {
-          document.getElementById('remoteVideo').srcObject = remoteStream;
-        });
+        localVideo.srcObject = stream;
+        call.answer(stream);
+        call.on('stream', remoteStream => remoteVideo.srcObject = remoteStream);
+        currentCall = call;
       });
     });
 
-    function sendMessage() {
-      const input = document.getElementById('chatInput');
-      const msg = input.value;
-      if (conn && conn.open) {
-        conn.send(msg);
-        displayMessage(msg, true);
-        input.value = '';
-      }
+    peer.on('connection', c => {
+      conn = c;
+      conn.on('data', data => {
+        chatBox.value += `\nStranger: ${data}`;
+      });
+    });
+
+    function getMediaStream() {
+      return navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     }
 
-    function displayMessage(msg, isMine) {
-      const box = document.getElementById('chatBox');
-      const div = document.createElement('div');
-      div.className = 'message' + (isMine ? ' me' : '');
-      div.innerText = msg;
-      box.appendChild(div);
-      box.scrollTop = box.scrollHeight;
-    }
+    document.getElementById('callNow').onclick = () => {
+      db.ref('waiting').once('value', snapshot => {
+        const list = snapshot.val();
+        const keys = Object.keys(list || {});
+        const peerId = keys.length > 1 ? list[keys.find(k => list[k].id !== peer.id)]?.id : null;
+
+        if (!peerId) return alert("No available peers");
+
+        getMediaStream().then(stream => {
+          localVideo.srcObject = stream;
+          const call = peer.call(peerId, stream);
+          call.on('stream', remoteStream => remoteVideo.srcObject = remoteStream);
+          currentCall = call;
+        });
+      });
+    };
+
+    document.getElementById('chatNow').onclick = () => {
+      db.ref('waiting').once('value', snapshot => {
+        const list = snapshot.val();
+        const keys = Object.keys(list || {});
+        const peerId = keys.length > 1 ? list[keys.find(k => list[k].id !== peer.id)]?.id : null;
+
+        if (!peerId) return alert("No available peers");
+
+        conn = peer.connect(peerId);
+        conn.on('open', () => {
+          conn.send("Hello from " + peer.id);
+          chatBox.value += `\nYou: Hello from ${peer.id}`;
+        });
+        conn.on('data', data => {
+          chatBox.value += `\nStranger: ${data}`;
+        });
+      });
+    };
+
+    chatBox.addEventListener('keypress', e => {
+      if (e.key === 'Enter' && !e.shiftKey && conn && conn.open) {
+        const message = chatBox.value.split("\n").pop();
+        conn.send(message);
+        chatBox.value += `\nYou: ${message}`;
+        e.preventDefault();
+      }
+    });
   </script>
 </body>
 </html>

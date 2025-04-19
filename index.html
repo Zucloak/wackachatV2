@@ -2,18 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Wackachat 🎥</title>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wackachat</title>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
     body {
       background: radial-gradient(circle at top left, #111 0%, #000 100%);
       color: #ffffffcc;
       height: 100vh;
-      margin: 0;
-      font-family: 'SF Pro Display', sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -30,6 +31,7 @@
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
     .title {
       font-size: 2rem;
@@ -38,99 +40,144 @@
       text-align: center;
       letter-spacing: 1px;
     }
+    .video-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
     video {
-      width: 100%;
+      width: 48%;
       border-radius: 12px;
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .button {
-      padding: 1rem;
+      padding: 0.9rem 1.5rem;
       background: linear-gradient(135deg, #0a84ff, #007aff);
       border: none;
       border-radius: 12px;
       color: #fff;
-      font-weight: bold;
+      font-weight: 600;
       font-size: 1rem;
       cursor: pointer;
-      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+      box-shadow: 0 4px 12px rgba(10, 132, 255, 0.4);
+    }
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(10, 132, 255, 0.6);
+    }
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+    input {
+      flex: 1;
+      padding: 0.8rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="title">Wackachat 🎥</div>
-    <video id="my-video" autoplay muted playsinline></video>
-    <video id="user-video" autoplay playsinline></video>
-    <button class="button" onclick="startRandomCall()">Call Now 🎲</button>
+
+    <div class="video-container">
+      <video id="my-video" autoplay muted playsinline></video>
+      <video id="user-video" autoplay playsinline></video>
+    </div>
+
+    <div class="input-group">
+      <input type="text" id="peer-id" placeholder="Press Call Now to start random chat...">
+      <button class="button" onclick="callRandomPeer()">Call Now</button>
+    </div>
   </div>
 
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js"></script>
+
   <script>
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk",
       authDomain: "wackachat.firebaseapp.com",
       databaseURL: "https://wackachat-default-rtdb.firebaseio.com",
       projectId: "wackachat",
-      storageBucket: "wackachat.appspot.com",
+      storageBucket: "wackachat.firebasestorage.app",
       messagingSenderId: "344884471257",
       appId: "1:344884471257:web:3d8dfb005128735ae7a5c8",
       measurementId: "G-MZM4LSXWFG"
     };
 
-    firebase.initializeApp(firebaseConfig);
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
+    const peer = new Peer({
+      host: 'peerjs.com',
+      secure: true,
+      port: 443
+    });
 
     const myVideo = document.getElementById('my-video');
     const userVideo = document.getElementById('user-video');
-    let peer, myId, localStream;
+    const peerIdInput = document.getElementById('peer-id');
 
-    async function initMedia() {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      myVideo.srcObject = localStream;
-      myVideo.play();
-    }
+    let localStream;
 
-    function startRandomCall() {
-      peer = new Peer({ host: 'peerjs.com', secure: true, port: 443 });
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        localStream = stream;
+        myVideo.srcObject = stream;
+        myVideo.play();
 
-      peer.on('open', id => {
-        myId = id;
-        findMatch(id);
-      });
-
-      peer.on('call', call => {
-        call.answer(localStream);
-        call.on('stream', remoteStream => {
-          userVideo.srcObject = remoteStream;
-          userVideo.play();
-        });
-      });
-    }
-
-    function findMatch(id) {
-      const waitingRef = db.ref('waiting');
-
-      waitingRef.once('value', snapshot => {
-        const waitingId = snapshot.val();
-
-        if (waitingId && waitingId !== id) {
-          waitingRef.remove();
-          const call = peer.call(waitingId, localStream);
+        peer.on('call', call => {
+          call.answer(stream);
           call.on('stream', remoteStream => {
             userVideo.srcObject = remoteStream;
             userVideo.play();
           });
-        } else {
-          waitingRef.set(id);
-        }
-      });
-    }
+        });
 
-    window.onload = () => {
-      initMedia().catch(err => {
-        alert('Could not access media devices.');
-        console.error(err);
+        window.callRandomPeer = function () {
+          const waitingRef = db.ref('waiting');
+          const myPeerId = peer.id;
+
+          // Add current user to "waiting" node
+          waitingRef.child(myPeerId).set({
+            peerId: myPeerId,
+            timestamp: Date.now()
+          }).then(() => {
+            console.log("You are now in the waiting pool.");
+
+            // Listen for a matching peer
+            waitingRef.orderByChild('timestamp').limitToFirst(1).once('child_added', function(snapshot) {
+              const matchedPeer = snapshot.val();
+
+              if (matchedPeer.peerId !== myPeerId) {
+                alert('Found a peer to chat with!');
+                const call = peer.call(matchedPeer.peerId, localStream);
+                call.on('stream', remoteStream => {
+                  userVideo.srcObject = remoteStream;
+                  userVideo.play();
+                });
+              }
+            });
+          });
+        };
+      })
+      .catch(error => {
+        console.error('Media error:', error);
+        alert('Failed to access your camera and microphone. Please allow permissions and reload the page.');
       });
-    };
+
+    peer.on('open', id => {
+      console.log('Your PeerJS ID:', id);
+      alert(`Your Wackachat ID: ${id}`);
+    });
   </script>
 </body>
 </html>

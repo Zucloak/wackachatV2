@@ -1,148 +1,232 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WackaChat</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      background: #121212;
-      color: #fff;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
-    .container {
-      background: #1e1e1e;
-      padding: 30px;
-      border-radius: 10px;
-      border: 2px solid #444;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
-      text-align: center;
-      max-width: 400px;
-      width: 100%;
-    }
-    h1 {
-      margin-bottom: 20px;
-      font-size: 28px;
-    }
-    button {
-      background: #00bcd4;
-      border: none;
-      color: white;
-      padding: 10px 20px;
-      margin: 10px;
-      border-radius: 5px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-    button:hover {
-      background: #0097a7;
-    }
-    video {
-      width: 100%;
-      margin-top: 20px;
-      border-radius: 8px;
-      border: 1px solid #444;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wackachat</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>WackaChat</h1>
-    <button onclick="callRandomPeer()">Call Now</button>
-    <button onclick="chatRandomPeer()">Chat Now</button>
-    <div>
-      <video id="local-video" autoplay muted playsinline></video>
-      <video id="remote-video" autoplay playsinline></video>
+    <div class="container">
+        <h1>Welcome to Wackachat</h1>
+        <div class="buttons">
+            <button id="callNowButton">Call Now</button>
+            <button id="chatNowButton">Chat Now</button>
+        </div>
+        <div id="peerIdContainer">
+            <h3>Your Peer ID: <span id="peerId"></span></h3>
+        </div>
+        <div id="chatContainer" class="hidden">
+            <div id="chatBox">
+                <input type="text" id="messageInput" placeholder="Type a message...">
+                <button id="sendMessageButton">Send</button>
+            </div>
+            <div id="messages"></div>
+        </div>
     </div>
-  </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #2e2e2e;
+    color: white;
+    margin: 0;
+    padding: 0;
+}
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
+.container {
+    width: 80%;
+    margin: 0 auto;
+    text-align: center;
+}
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk",
-      authDomain: "wackachat.firebaseapp.com",
-      databaseURL: "https://wackachat-default-rtdb.firebaseio.com",
-      projectId: "wackachat",
-      storageBucket: "wackachat.appspot.com",
-      messagingSenderId: "344884471257",
-      appId: "1:344884471257:web:3d8dfb005128735ae7a5c8",
-      measurementId: "G-MZM4LSXWFG"
-    };
+h1 {
+    font-size: 3rem;
+    margin: 2rem 0;
+}
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+.buttons {
+    margin-bottom: 2rem;
+}
 
-    const peer = new Peer();
-    const localVideo = document.getElementById('local-video');
-    const remoteVideo = document.getElementById('remote-video');
+button {
+    background-color: #6200ea;
+    border: none;
+    color: white;
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 5px;
+    margin: 0 10px;
+    transition: background-color 0.3s;
+}
 
-    peer.on('open', id => {
-      console.log("My Peer ID:", id);
+button:hover {
+    background-color: #3700b3;
+}
+
+#peerIdContainer {
+    font-size: 1.2rem;
+    margin-top: 1rem;
+}
+
+#chatContainer {
+    margin-top: 20px;
+}
+
+.hidden {
+    display: none;
+}
+
+#chatBox {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+#messageInput {
+    width: 80%;
+    padding: 10px;
+    font-size: 1rem;
+    border-radius: 5px;
+}
+
+#sendMessageButton {
+    background-color: #6200ea;
+    border: none;
+    color: white;
+    padding: 10px;
+    font-size: 1rem;
+    border-radius: 5px;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+#sendMessageButton:hover {
+    background-color: #3700b3;
+}
+
+#messages {
+    margin-top: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #fff;
+    padding: 10px;
+}
+// Initialize Firebase
+const db = firebase.database();
+
+// Set up PeerJS
+const peer = new Peer(undefined, {
+    host: 'your-peerjs-server.com', 
+    port: 9000,
+    path: '/peerjs',
+});
+
+// Display Peer ID
+peer.on('open', id => {
+    document.getElementById('peerId').textContent = id;
+});
+
+// Call Now Button Functionality
+document.getElementById('callNowButton').addEventListener('click', () => {
+    callRandomPeer();
+});
+
+// Chat Now Button Functionality
+document.getElementById('chatNowButton').addEventListener('click', () => {
+    chatRandomPeer();
+});
+
+// Random Call Functionality
+function callRandomPeer() {
+    const randomPeerId = generateRandomPeerId();
+    const call = peer.call(randomPeerId, stream);
+
+    call.on('stream', remoteStream => {
+        const videoElement = document.createElement('video');
+        videoElement.srcObject = remoteStream;
+        videoElement.play();
+        document.body.append(videoElement);
     });
+}
 
-    peer.on('call', call => {
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(stream => {
-          localVideo.srcObject = stream;
-          call.answer(stream);
-          call.on('stream', remoteStream => {
-            remoteVideo.srcObject = remoteStream;
-          });
+// Random Chat Functionality
+function chatRandomPeer() {
+    const randomPeerId = generateRandomPeerId();
+    const conn = peer.connect(randomPeerId);
+
+    conn.on('open', () => {
+        document.getElementById('chatContainer').classList.remove('hidden');
+        conn.on('data', data => {
+            const messageElement = document.createElement('div');
+            messageElement.textContent = data;
+            document.getElementById('messages').append(messageElement);
         });
     });
 
-    function callRandomPeer() {
-      const myId = peer.id;
-      db.ref('waiting_call').once('value').then(snapshot => {
-        const waitingId = snapshot.val();
-        if (waitingId && waitingId !== myId) {
-          db.ref('waiting_call').remove();
-          navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-            .then(stream => {
-              localVideo.srcObject = stream;
-              const call = peer.call(waitingId, stream);
-              call.on('stream', remoteStream => {
-                remoteVideo.srcObject = remoteStream;
-              });
-            });
-        } else {
-          db.ref('waiting_call').set(myId);
-        }
-      });
-    }
+    document.getElementById('sendMessageButton').addEventListener('click', () => {
+        const message = document.getElementById('messageInput').value;
+        conn.send(message);
+        document.getElementById('messageInput').value = '';
+    });
+}
 
-    function chatRandomPeer() {
-      const myId = peer.id;
-      db.ref('waiting_chat').once('value').then(snapshot => {
-        const waitingId = snapshot.val();
-        if (waitingId && waitingId !== myId) {
-          db.ref('waiting_chat').remove();
-          const conn = peer.connect(waitingId);
-          conn.on('open', () => {
-            conn.send("Hello from " + myId);
-            conn.on('data', data => {
-              alert("Received: " + data);
-            });
-          });
-        } else {
-          db.ref('waiting_chat').set(myId);
-        }
-      });
-    }
-  </script>
-</body>
-</html>
+// Generate Random Peer ID (for demo purposes)
+function generateRandomPeerId() {
+    return Math.random().toString(36).substring(2, 15); // Random string
+}
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID",
+    measurementId: "YOUR_MEASUREMENT_ID"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const express = require('express');
+const PeerServer = require('peer').PeerServer;
+const app = express();
+
+// Setup PeerJS server
+const peerServer = PeerServer({
+    port: 9000,
+    path: '/peerjs'
+});
+
+// Serve static files from the 'public' directory (where your HTML, CSS, and JS files are)
+app.use(express.static('public'));
+
+// Start server
+app.listen(3000, () => {
+    console.log("Server running on port 3000");
+});
+{
+    "name": "wackachat",
+    "version": "1.0.0",
+    "description": "Randomized Calling and Chatting App",
+    "main": "index.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "firebase": "^9.1.2",
+        "peer": "^1.5.2",
+        "express": "^4.17.1"
+    },
+    "devDependencies": {},
+    "engines": {
+        "node": "14.x"
+    },
+    "author": "Your Name",
+    "license": "ISC"
+}

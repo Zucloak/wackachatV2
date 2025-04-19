@@ -9,19 +9,18 @@
 <body>
   <div class="container">
     <h1>Wackachat V2</h1>
-
-    <div class="video-wrapper">
-      <video id="remoteVideo" autoplay playsinline></video>
-      <video id="localVideo" autoplay muted playsinline></video>
+    <div id="videoWrapper">
+      <video id="remoteVideo" autoplay></video>
+      <video id="localVideo" autoplay muted></video>
     </div>
 
-    <div class="info-panel">
-      <div id="onlineUsers">Online: 0</div>
-      <div class="buttons">
-        <button id="btnCall">Call Now</button>
-        <button id="btnChat">Chat Now</button>
-      </div>
+    <div class="buttons">
+      <button id="btnCall">Call Now</button>
+      <button id="btnChat">Chat Now</button>
+      <button id="btnEndCall" class="hidden">End Call</button>
     </div>
+
+    <div id="onlineUsers">Online: 0</div>
 
     <div id="chatBox" class="hidden">
       <div id="messages"></div>

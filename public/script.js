@@ -11,36 +11,35 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// Initialize PeerJS
+// === PEERJS SETUP ===
 const peer = new Peer();
 let localStream, currentCall;
 
-// DOM references
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const btnCall = document.getElementById("btnCall");
 const btnChat = document.getElementById("btnChat");
+const btnEndCall = document.getElementById("btnEndCall");
 const onlineUsersDisplay = document.getElementById("onlineUsers");
 const chatBox = document.getElementById("chatBox");
 const messagesDiv = document.getElementById("messages");
-const sendMessageBtn = document.getElementById("sendMessage");
 const messageInput = document.getElementById("messageInput");
+const sendMessageBtn = document.getElementById("sendMessage");
 
-// Access media
-navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-  localStream = stream;
-  localVideo.srcObject = stream;
-}).catch(console.error);
+// === MEDIA ACCESS ===
+navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+  .then(stream => {
+    localStream = stream;
+    localVideo.srcObject = stream;
+  }).catch(console.error);
 
-// PeerJS open
+// === ON PEER OPEN ===
 peer.on("open", id => {
-  const userRef = database.ref(`users/${id}`);
-  userRef.set({ name: `User-${id}`, status: "online" });
-  userRef.onDisconnect().remove();
+  database.ref(`users/${id}`).set({ status: "online" });
+  database.ref(`users/${id}`).onDisconnect().remove();
   updateOnlineUserCount();
 });
 
-// Count online users
 function updateOnlineUserCount() {
   database.ref("users").on("value", snap => {
     const users = snap.val() || {};
@@ -49,53 +48,20 @@ function updateOnlineUserCount() {
   });
 }
 
-// Incoming call
+// === HANDLE INCOMING CALL ===
 peer.on("call", call => {
   call.answer(localStream);
-  call.on("stream", remoteStream => {
-    remoteVideo.srcObject = remoteStream;
+  call.on("stream", stream => {
+    remoteVideo.srcObject = stream;
   });
+  currentCall = call;
+  btnEndCall.classList.remove("hidden");
 });
 
-// Outgoing call
-btnCall.onclick = function callRandomPeer() {
-  database.ref("waiting_call").once("value").then(snap => {
-    const other = snap.val();
-    if (other && other !== peer.id) {
-      database.ref("waiting_call").remove();
-      startCall(other);
-    } else {
-      database.ref("waiting_call").set(peer.id);
-      database.ref("waiting_call").onDisconnect().remove();
-    }
-  });
-};
-
-function startCall(id) {
-  const call = peer.call(id, localStream);
-  call.on("stream", stream => remoteVideo.srcObject = stream);
-  currentCall = call;
-}
-
-// Outgoing chat
-btnChat.onclick = function chatRandomPeer() {
-  database.ref("waiting_chat").once("value").then(snap => {
-    const other = snap.val();
-    if (other && other !== peer.id) {
-      database.ref("waiting_chat").remove();
-      setupChat(peer.connect(other));
-    } else {
-      database.ref("waiting_chat").set(peer.id);
-      database.ref("waiting_chat").onDisconnect().remove();
-    }
-  });
-};
-
-peer.on("connection", conn => setupChat(conn));
-
-function setupChat(conn) {
+// === HANDLE INCOMING CHAT ===
+peer.on("connection", conn => {
   chatBox.classList.remove("hidden");
-  conn.on("data", data => appendMessage(`Stranger: ${data}`));
+  conn.on("data", msg => appendMessage(`Stranger: ${msg}`));
   sendMessageBtn.onclick = () => {
     const msg = messageInput.value.trim();
     if (!msg) return;
@@ -103,35 +69,81 @@ function setupChat(conn) {
     appendMessage(`You: ${msg}`);
     messageInput.value = "";
   };
-}
+});
 
-function appendMessage(txt) {
+// === CALL RANDOM PEER ===
+btnCall.onclick = () => {
+  database.ref("waiting_call").once("value").then(snap => {
+    const other = snap.val();
+    if (other && other !== peer.id) {
+      database.ref("waiting_call").remove();
+      const call = peer.call(other, localStream);
+      call.on("stream", stream => remoteVideo.srcObject = stream);
+      currentCall = call;
+      btnEndCall.classList.remove("hidden");
+    } else {
+      database.ref("waiting_call").set(peer.id).onDisconnect().remove();
+    }
+  });
+};
+
+// === CHAT RANDOM PEER ===
+btnChat.onclick = () => {
+  database.ref("waiting_chat").once("value").then(snap => {
+    const other = snap.val();
+    if (other && other !== peer.id) {
+      database.ref("waiting_chat").remove();
+      const conn = peer.connect(other);
+      conn.on("open", () => {
+        chatBox.classList.remove("hidden");
+        conn.on("data", msg => appendMessage(`Stranger: ${msg}`));
+        sendMessageBtn.onclick = () => {
+          const msg = messageInput.value.trim();
+          if (!msg) return;
+          conn.send(msg);
+          appendMessage(`You: ${msg}`);
+          messageInput.value = "";
+        };
+      });
+    } else {
+      database.ref("waiting_chat").set(peer.id).onDisconnect().remove();
+    }
+  });
+};
+
+// === END CALL ===
+btnEndCall.onclick = () => {
+  if (currentCall) {
+    currentCall.close();
+    remoteVideo.srcObject = null;
+    btnEndCall.classList.add("hidden");
+  }
+};
+
+// === APPEND CHAT MESSAGE ===
+function appendMessage(text) {
   const div = document.createElement("div");
-  div.textContent = txt;
+  div.textContent = text;
   messagesDiv.appendChild(div);
 }
 
-// Make local video draggable
-function makeDraggable(video) {
-  let isDragging = false, x = 0, y = 0;
+// === DRAGGABLE LOCAL VIDEO ===
+localVideo.addEventListener('mousedown', dragStart);
+let offset = { x: 0, y: 0 };
 
-  video.addEventListener("touchstart", e => {
-    isDragging = true;
-    const touch = e.touches[0];
-    x = touch.clientX - video.offsetLeft;
-    y = touch.clientY - video.offsetTop;
-  });
-
-  video.addEventListener("touchmove", e => {
-    if (!isDragging) return;
-    const touch = e.touches[0];
-    video.style.left = `${touch.clientX - x}px`;
-    video.style.top = `${touch.clientY - y}px`;
-  });
-
-  video.addEventListener("touchend", () => {
-    isDragging = false;
-  });
+function dragStart(e) {
+  offset.x = e.clientX - localVideo.offsetLeft;
+  offset.y = e.clientY - localVideo.offsetTop;
+  document.addEventListener('mousemove', dragMove);
+  document.addEventListener('mouseup', dragEnd);
 }
 
-makeDraggable(localVideo);
+function dragMove(e) {
+  localVideo.style.left = `${e.clientX - offset.x}px`;
+  localVideo.style.top = `${e.clientY - offset.y}px`;
+}
+
+function dragEnd() {
+  document.removeEventListener('mousemove', dragMove);
+  document.removeEventListener('mouseup', dragEnd);
+}

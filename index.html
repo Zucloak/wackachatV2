@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wackachat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background: radial-gradient(circle at top left, #111 0%, #000 100%);
+      color: #ffffffcc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+      padding: 2rem;
+      max-width: 700px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffffff;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    .video-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    video {
+      width: 48%;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: black;
+    }
+    .button {
+      padding: 0.9rem 1.5rem;
+      background: linear-gradient(135deg, #0a84ff, #007aff);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+      box-shadow: 0 4px 12px rgba(10, 132, 255, 0.4);
+    }
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(10, 132, 255, 0.6);
+    }
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+    input {
+      flex: 1;
+      padding: 0.8rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+    }
+    .peer-id-card {
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      text-align: center;
+      color: #fff;
+      font-weight: 600;
+      font-size: 1.2rem;
+      position: relative;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      border: none;
+      color: #0a84ff;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">Wackachat 🎥</div>
+
+    <div class="video-container">
+      <video id="my-video" autoplay muted playsinline></video>
+      <video id="user-video" autoplay playsinline></video>
+    </div>
+
+    <div class="peer-id-card" id="my-peer-id-box">
+      <span>Your ID: <span id="my-id">Loading...</span></span>
+      <button class="copy-btn" onclick="copyPeerID()">Copy</button>
+    </div>
+
+    <div class="input-group">
+      <input type="text" id="peer-id" placeholder="Enter Peer ID to call...">
+      <button class="button" onclick="callPeer()">Call</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script>
+    const peer = new Peer({
+      host: 'peerjs.com',
+      secure: true,
+      port: 443
+    });
+
+    const myVideo = document.getElementById('my-video');
+    const userVideo = document.getElementById('user-video');
+    const peerIdInput = document.getElementById('peer-id');
+    const myIdDisplay = document.getElementById('my-id');
+
+    let localStream;
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        localStream = stream;
+        myVideo.srcObject = stream;
+        myVideo.play();
+
+        peer.on('call', call => {
+          call.answer(stream);
+          call.on('stream', remoteStream => {
+            userVideo.srcObject = remoteStream;
+            userVideo.play();
+          });
+        });
+
+        window.callPeer = function () {
+          const peerId = peerIdInput.value.trim();
+          if (!peerId) return alert('Please enter a valid Peer ID to call.');
+          const call = peer.call(peerId, stream);
+          call.on('stream', remoteStream => {
+            userVideo.srcObject = remoteStream;
+            userVideo.play();
+          });
+        };
+      })
+      .catch(error => {
+        console.error('Media error:', error);
+        alert('Failed to access your camera and microphone. Please allow permissions and reload the page.');
+      });
+
+    peer.on('open', id => {
+      myIdDisplay.textContent = id;
+    });
+
+    window.copyPeerID = function () {
+      const id = myIdDisplay.textContent;
+      navigator.clipboard.writeText(id).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = "Copied!";
+        setTimeout(() => btn.textContent = "Copy", 2000);
+      });
+    };
+  </script>
+</body>
+</html>

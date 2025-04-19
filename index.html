@@ -1,58 +1,38 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Wackachat</title>
+  <title>WackaChat</title>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <style>
-    body {
-      font-family: 'SF Pro Display', sans-serif;
-      background: #000;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      flex-direction: column;
-      gap: 1rem;
-    }
-    video {
-      width: 300px;
-      border-radius: 10px;
-      margin: 0 10px;
-      border: 1px solid #444;
-    }
-    .button {
-      padding: 0.8rem 1.5rem;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .button:hover {
-      background: #0056b3;
-    }
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    video { width: 300px; height: 225px; margin: 10px; background: #000; }
+    #messages { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: scroll; text-align: left; margin-top: 20px; }
+    #chatInput { width: 80%; padding: 10px; margin-top: 10px; }
   </style>
 </head>
 <body>
 
-  <h1>Wackachat 🎥</h1>
+  <h1>WackaChat</h1>
+
+  <h3>Random Video Call</h3>
+  <button onclick="callRandomPeer()">Call Now</button>
   <div>
-    <video id="my-video" autoplay muted playsinline></video>
-    <video id="user-video" autoplay playsinline></video>
+    <video id="myVideo" autoplay muted></video>
+    <video id="peerVideo" autoplay></video>
   </div>
-  <button class="button" onclick="callRandomPeer()">Call Now</button>
 
-  <!-- Firebase v8 SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
-
-  <!-- PeerJS - WORKING CDN -->
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <h3>Random Text Chat</h3>
+  <button onclick="startTextChat()">Chat Now</button>
+  <div id="messages"></div>
+  <input id="chatInput" type="text" placeholder="Type your message..." />
+  <button onclick="sendMessage()">Send</button>
 
   <script>
-    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk",
       authDomain: "wackachat.firebaseapp.com",
@@ -60,74 +40,80 @@
       projectId: "wackachat",
       storageBucket: "wackachat.appspot.com",
       messagingSenderId: "344884471257",
-      appId: "1:344884471257:web:3d8dfb005128735ae7a5c8"
+      appId: "1:344884471257:web:3d8dfb005128735ae7a5c8",
+      measurementId: "G-MZM4LSXWFG"
     };
-
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const myVideo = document.getElementById('my-video');
-    const userVideo = document.getElementById('user-video');
-
+    // --- Random Video Call ---
+    const peer = new Peer();
     let localStream;
-    let peer = null;
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+      document.getElementById("myVideo").srcObject = stream;
+      localStream = stream;
+    });
 
-    // Setup media and Peer connection
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        localStream = stream;
-        myVideo.srcObject = stream;
-
-        peer = new Peer(); // Auto-generates ID
-
-        peer.on('open', id => {
-          console.log("My Peer ID: " + id);
-
-          // Listen for incoming calls
-          peer.on('call', call => {
-            call.answer(localStream);
-            call.on('stream', userStream => {
-              userVideo.srcObject = userStream;
-            });
+    peer.on("open", id => {
+      console.log("My Peer ID: " + id);
+      db.ref("waitingCalls").once("value").then(snapshot => {
+        const waitingPeer = snapshot.val();
+        if (waitingPeer) {
+          db.ref("waitingCalls").remove();
+          const call = peer.call(waitingPeer, localStream);
+          call.on("stream", remoteStream => {
+            document.getElementById("peerVideo").srcObject = remoteStream;
           });
-        });
-
-      })
-      .catch(error => {
-        console.error('Media error:', error);
-        alert('Camera/Mic access failed. Please allow and reload.');
-      });
-
-    // Global call function
-    function callRandomPeer() {
-      if (!peer || !peer.id) {
-        alert("Peer connection not ready yet. Please wait...");
-        return;
-      }
-
-      const waitingRef = db.ref('waiting');
-      const myID = peer.id;
-
-      waitingRef.once('value', snapshot => {
-        const peers = snapshot.val() || {};
-        const availablePeers = Object.keys(peers).filter(id => id !== myID);
-
-        if (availablePeers.length > 0) {
-          const randomPeerID = availablePeers[Math.floor(Math.random() * availablePeers.length)];
-          console.log("Calling: " + randomPeerID);
-          const call = peer.call(randomPeerID, localStream);
-
-          call.on('stream', userStream => {
-            userVideo.srcObject = userStream;
-          });
-
-          db.ref('waiting/' + randomPeerID).remove();
         } else {
-          waitingRef.child(myID).set({ timestamp: Date.now() });
-          alert("No peers available. You're now waiting to be called.");
+          db.ref("waitingCalls").set(id);
         }
       });
+    });
+
+    peer.on("call", call => {
+      call.answer(localStream);
+      call.on("stream", remoteStream => {
+        document.getElementById("peerVideo").srcObject = remoteStream;
+      });
+    });
+
+    function callRandomPeer() {
+      window.location.reload(); // triggers a new peer ID to be generated
+    }
+
+    // --- Random Text Chat ---
+    let currentRoom = null;
+    let userId = Math.random().toString(36).substring(2, 10);
+
+    function startTextChat() {
+      db.ref("waitingTextUsers").once("value").then(snapshot => {
+        const partnerId = snapshot.val();
+        if (partnerId && partnerId !== userId) {
+          db.ref("waitingTextUsers").remove();
+          const roomId = userId + partnerId;
+          currentRoom = roomId;
+          db.ref("textRooms/" + roomId).push({ sender: "System", text: "User connected." });
+          listenForMessages(roomId);
+        } else {
+          db.ref("waitingTextUsers").set(userId);
+        }
+      });
+    }
+
+    function listenForMessages(roomId) {
+      db.ref("textRooms/" + roomId).on("child_added", snapshot => {
+        const msg = snapshot.val();
+        const messageDiv = document.getElementById("messages");
+        messageDiv.innerHTML += `<p><strong>${msg.sender}:</strong> ${msg.text}</p>`;
+        messageDiv.scrollTop = messageDiv.scrollHeight;
+      });
+    }
+
+    function sendMessage() {
+      const msgText = document.getElementById("chatInput").value;
+      if (!currentRoom || msgText.trim() === "") return;
+      db.ref("textRooms/" + currentRoom).push({ sender: userId, text: msgText });
+      document.getElementById("chatInput").value = "";
     }
   </script>
 </body>

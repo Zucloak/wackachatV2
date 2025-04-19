@@ -1,12 +1,12 @@
-// Firebase config (already known)
+// Firebase config (Yours)
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_BUCKET",
-  messagingSenderId: "YOUR_ID",
-  appId: "YOUR_APP_ID",
-  databaseURL: "YOUR_DATABASE_URL"
+  apiKey: "AIzaSyB2n4SfsnOJFeSKuGZCL4B2jUJwJdkXjKo",
+  authDomain: "wackachat.firebaseapp.com",
+  databaseURL: "https://wackachat-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "wackachat",
+  storageBucket: "wackachat.appspot.com",
+  messagingSenderId: "217389174841",
+  appId: "1:217389174841:web:7f3ebf3a56956c67f4e574"
 };
 
 firebase.initializeApp(firebaseConfig);

@@ -1,94 +1,94 @@
-/* Reset & base */
+/* RESET & BASE */
 * {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
-  background-color: #000;
-  color: #fff;
-  overflow: hidden;
+  background-color: #0d0d0d;
+  color: #f1f1f1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   height: 100vh;
-  width: 100vw;
-  position: relative;
+  overflow: hidden;
 }
 
-/* Remote video — full screen */
-#remoteVideo {
-  position: absolute;
-  top: 0;
-  left: 0;
+.container {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 0;
-  background: #000;
+  max-width: 1200px;
+  padding: 20px;
+  text-align: center;
 }
 
-/* Local video — small and bottom-left */
+/* TITLE */
+h1 {
+  margin-bottom: 20px;
+  font-size: 2.5rem;
+  color: #00ffaa;
+}
+
+/* VIDEO LAYOUT */
+video {
+  background-color: #222;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+#remoteVideo {
+  width: 100%;
+  height: 70vh;
+  max-height: 70vh;
+  border: 3px solid #00ffaa;
+  margin-bottom: 15px;
+}
+
 #localVideo {
   position: absolute;
   bottom: 20px;
   left: 20px;
-  width: 200px;
-  height: 150px;
-  border: 2px solid #fff;
-  border-radius: 8px;
-  object-fit: cover;
-  z-index: 1;
-  background: #000;
+  width: 160px;
+  height: 120px;
+  border: 2px solid #00ffaa;
+  z-index: 10;
+  background-color: #000;
 }
 
-/* Central container for controls */
-.container {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 20px 30px;
-  border-radius: 12px;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-}
-
-h1 {
-  margin-bottom: 15px;
-  font-size: 2rem;
-  color: #00ffcc;
-}
-
-/* Buttons */
+/* BUTTONS */
 .buttons {
-  margin-bottom: 15px;
+  margin-top: 20px;
 }
 
-button {
-  background-color: #00ffcc;
+.buttons button {
+  background-color: #00ffaa;
   color: #000;
   border: none;
-  padding: 10px 16px;
-  margin: 0 8px;
+  padding: 12px 24px;
   font-size: 1rem;
-  border-radius: 8px;
+  margin: 10px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.3s;
 }
 
-button:hover {
-  background-color: #00ccaa;
+.buttons button:hover {
+  background-color: #00cc88;
 }
 
-/* Chat box */
+/* CHAT BOX */
 #chatBox {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 15px;
+  margin-top: 20px;
+  background-color: #111;
+  border: 2px solid #00ffaa;
   border-radius: 8px;
-  max-width: 400px;
-  margin: auto;
+  padding: 10px;
+  max-width: 100%;
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 #chatBox.hidden {
@@ -96,48 +96,82 @@ button:hover {
 }
 
 #messages {
-  max-height: 150px;
+  flex: 1;
   overflow-y: auto;
-  margin-bottom: 10px;
+  padding: 10px;
   text-align: left;
 }
 
 #messageInput {
-  width: 70%;
-  padding: 8px;
-  margin-right: 5px;
-  border-radius: 6px;
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 4px;
   border: none;
-  font-size: 1rem;
-}
-
-#onlineUsers {
-  font-size: 1rem;
   margin-top: 10px;
-  color: #00ffcc;
+  width: calc(100% - 100px);
 }
 
-/* Mobile responsiveness */
+#sendMessage {
+  padding: 10px;
+  margin-top: 10px;
+  width: 80px;
+  font-weight: bold;
+  background-color: #00ffaa;
+  border: none;
+  color: #000;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#sendMessage:hover {
+  background-color: #00cc88;
+}
+
+/* ONLINE USERS DISPLAY */
+#onlineUsers {
+  margin-top: 10px;
+  font-size: 1.1rem;
+  color: #ccc;
+}
+
+/* RESPONSIVE DESIGN */
 @media (max-width: 768px) {
+  body {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .container {
+    padding: 10px;
+  }
+
+  #remoteVideo {
+    width: 100%;
+    height: 50vh;
+  }
+
   #localVideo {
-    width: 120px;
-    height: 90px;
+    width: 100px;
+    height: 75px;
     bottom: 10px;
     left: 10px;
   }
 
-  .container {
-    width: 90%;
-    padding: 10px;
+  .buttons button {
+    width: 100%;
+    margin: 5px 0;
   }
 
-  button {
-    margin: 5px 0;
-    display: block;
-    width: 100%;
+  #chatBox {
+    height: 250px;
   }
 
   #messageInput {
-    width: 60%;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  #sendMessage {
+    width: 100%;
   }
 }

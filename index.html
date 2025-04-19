@@ -153,7 +153,7 @@
           }).then(() => {
             console.log("You are now in the waiting pool.");
 
-            // Listen for a matching peer
+            // Check for a matched peer
             waitingRef.orderByChild('timestamp').limitToFirst(1).once('child_added', function(snapshot) {
               const matchedPeer = snapshot.val();
 
@@ -164,6 +164,9 @@
                   userVideo.srcObject = remoteStream;
                   userVideo.play();
                 });
+
+                // Remove matched user from waiting pool
+                waitingRef.child(matchedPeer.peerId).remove();
               }
             });
           });

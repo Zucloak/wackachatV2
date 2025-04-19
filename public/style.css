@@ -1,98 +1,70 @@
-body, html {
+body {
   margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background-color: #111;
-  color: #eee;
-  overflow-x: hidden;
+  font-family: sans-serif;
+  background-color: #1a1a1a;
+  color: white;
+  overflow: hidden;
 }
 
-.container {
-  padding: 20px;
-  text-align: center;
-}
-
-#videoWrapper {
-  position: relative;
-  width: 100%;
-  max-width: 100vw;
-  height: 60vh;
-  background: #222;
-  margin-bottom: 1rem;
+video {
+  background: black;
+  border-radius: 8px;
 }
 
 #remoteVideo {
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   object-fit: cover;
+  z-index: 1;
 }
 
 #localVideo {
-  width: 150px;
-  height: 100px;
-  position: absolute;
+  position: fixed;
+  width: 120px;
+  height: 90px;
   bottom: 10px;
   left: 10px;
-  object-fit: cover;
+  z-index: 9999;
   border: 2px solid #fff;
   cursor: move;
-  z-index: 2;
 }
 
-.buttons {
-  margin: 20px 0;
+.controls {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 999;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 button {
-  padding: 10px 20px;
-  margin: 5px;
-  font-size: 1rem;
+  background: #444;
   border: none;
-  background-color: #444;
-  color: #fff;
+  padding: 10px;
+  color: white;
   cursor: pointer;
   border-radius: 5px;
 }
 
-button:hover {
-  background-color: #666;
-}
-
 #chatBox {
-  max-width: 600px;
-  margin: 0 auto;
-  text-align: left;
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  width: 300px;
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 10px;
+  z-index: 9999;
 }
 
 #messages {
-  height: 200px;
+  max-height: 150px;
   overflow-y: auto;
-  background: #1e1e1e;
-  padding: 10px;
-  border: 1px solid #333;
   margin-bottom: 10px;
-}
-
-#messageInput {
-  width: 70%;
-  padding: 10px;
-  margin-right: 5px;
-  border-radius: 3px;
-  border: 1px solid #555;
-  background: #222;
-  color: #fff;
 }
 
 .hidden {
   display: none;
-}
-
-@media (max-width: 768px) {
-  #localVideo {
-    width: 120px;
-    height: 80px;
-  }
-  #messageInput {
-    width: 60%;
-  }
 }

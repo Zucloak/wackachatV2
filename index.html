@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wackachat</title>
   <style>
-    /* Styling for the page remains the same */
     * {
       margin: 0;
       padding: 0;
@@ -146,24 +145,22 @@
           });
         });
 
+        // This function will be called when the Call Now button is clicked
         window.callRandomPeer = function () {
           const waitingRef = db.ref('waiting');
           const myPeerId = peer.id;
 
-          // Check if peer ID is available before proceeding
           if (!myPeerId) {
             alert("Failed to get your peer ID. Please try again.");
             return;
           }
 
-          // Add current user to "waiting" node
           waitingRef.child(myPeerId).set({
             peerId: myPeerId,
             timestamp: Date.now()
           }).then(() => {
             console.log("You are now in the waiting pool.");
 
-            // Check for a matched peer
             waitingRef.orderByChild('timestamp').limitToFirst(1).once('child_added', function(snapshot) {
               const matchedPeer = snapshot.val();
 
@@ -175,7 +172,6 @@
                   userVideo.play();
                 });
 
-                // Remove matched user from waiting pool
                 waitingRef.child(matchedPeer.peerId).remove();
               }
             });

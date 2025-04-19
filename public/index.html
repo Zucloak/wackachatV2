@@ -9,25 +9,26 @@
 <body>
 
   <!-- Fullscreen Remote Video -->
-  <video id="remoteVideo" autoplay></video>
+  <video id="remoteVideo" autoplay playsinline></video>
 
   <!-- Floating Local Video -->
-  <video id="localVideo" autoplay muted></video>
+  <video id="localVideo" autoplay muted playsinline></video>
 
   <!-- Controls + Chat -->
   <div class="container">
     <h1>Wackachat V2</h1>
 
     <div class="buttons">
-      <button onclick="callRandomPeer()">Call Now</button>
-      <button onclick="chatRandomPeer()">Chat Now</button>
+      <!-- Added id attributes here -->
+      <button id="btnCall">Call Now</button>
+      <button id="btnChat">Chat Now</button>
       <p id="onlineUsers">Online: 0</p>
     </div>
 
     <div id="chatBox" class="hidden">
       <div id="messages"></div>
       <input type="text" id="messageInput" placeholder="Type your message..." />
-      <button onclick="sendMessage()">Send</button>
+      <button id="sendMessage">Send</button>
     </div>
   </div>
 
@@ -37,6 +38,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <!-- Main Script -->
-  <script src="script.js"></script>
+  <script src="/script.js"></script>
 </body>
 </html>

@@ -1,120 +1,112 @@
-// Initialize Firebase with your real config
+// Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyA1Htn_xlJcwwnk8AP_mKMrM-VysOnILpY",
-  authDomain: "wackachat-4e717.firebaseapp.com",
-  databaseURL: "https://wackachat-4e717-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "wackachat-4e717",
-  storageBucket: "wackachat-4e717.appspot.com",
-  messagingSenderId: "88450699359",
-  appId: "1:88450699359:web:86c21d8d0a8005db2a1391"
+  apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk", // Replace with your API key
+  authDomain: "wackachat.firebaseapp.com", // Replace with your auth domain
+  databaseURL: "https://wackachat-default-rtdb.firebaseio.com", // Replace with your database URL
+  projectId: "wackachat", // Replace with your project ID
+  storageBucket: "wackachat.firebasestorage.app", // Replace with your storage bucket
+  messagingSenderId: "344884471257", // Replace with your messaging sender ID
+  appId: "1:344884471257:web:3d8dfb005128735ae7a5c8" // Replace with your app ID
 };
 
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// PeerJS initialization
-let peer;
-let localStream;
-let currentCall;
+// PeerJS init …
+let peer = new Peer({ /* … */ });
+let localStream, currentCall;
 
-window.addEventListener('load', () => {
-  peer = new Peer({
-    host: 'wackachat-peer-server.onrender.com',
-    port: 9000,
-    path: '/',
-    secure: true,
-    key: 'wackakey'
+// Grab the **correct** IDs
+const localVideo = document.getElementById("localVideo");
+const remoteVideo = document.getElementById("remoteVideo");
+const btnCall = document.getElementById("btnCall");
+const btnChat = document.getElementById("btnChat");
+const onlineUsersDisplay = document.getElementById("onlineUsers");
+const chatBox = document.getElementById("chatBox");
+const messagesDiv = document.getElementById("messages");
+const sendMessageBtn = document.getElementById("sendMessage");
+const messageInput = document.getElementById("messageInput");
+
+// Media access …
+navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+  .then(stream => {
+    localStream = stream;
+    localVideo.srcObject = stream;
+  }).catch(console.error);
+
+// When PeerJS opens …
+peer.on("open", id => {
+  // … register online user, onDisconnect, count, etc.
+  updateOnlineUserCount();
+});
+
+// COUNT ONLINE USERS
+function updateOnlineUserCount() {
+  database.ref("users").on("value", snap => {
+    const users = snap.val() || {};
+    const count = Object.values(users).filter(u => u.status === "online").length;
+    onlineUsersDisplay.innerText = `Online: ${count}`;
   });
+}
 
-  peer.on('open', (id) => {
-    const userRef = database.ref('users/' + id);
-    userRef.set({ name: id, status: 'online' });
-    userRef.onDisconnect().remove();
-    updateOnlineUserCount();
-  });
-
-  peer.on('call', (call) => {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then((stream) => {
-        localStream = stream;
-        document.getElementById('localVideo').srcObject = stream;
-        call.answer(stream);
-        call.on('stream', (remoteStream) => {
-          document.getElementById('remoteVideo').srcObject = remoteStream;
-        });
-        currentCall = call;
-      });
-  });
-
-  peer.on('connection', (conn) => {
-    setupConnection(conn);
+// INCOMING CALL
+peer.on("call", call => {
+  call.answer(localStream);
+  call.on("stream", remoteStream => {
+    remoteVideo.srcObject = remoteStream;
   });
 });
 
-// Show live online count
-function updateOnlineUserCount() {
-  const onlineUsersRef = database.ref('users');
-  onlineUsersRef.on('value', (snapshot) => {
-    const users = snapshot.val();
-    const count = Object.values(users || {}).filter(u => u.status === 'online').length;
-    document.getElementById('onlineCount').innerText = `Online Users: ${count}`;
-  });
-}
-
-// Call random peer
+// OUTGOING RANDOM CALL
+btnCall.onclick = callRandomPeer;
 function callRandomPeer() {
-  database.ref('users').once('value').then(snapshot => {
-    const users = snapshot.val();
-    const others = Object.keys(users || {}).filter(uid => uid !== peer.id);
-    if (others.length === 0) return alert('No one is available to call.');
-
-    const randomId = others[Math.floor(Math.random() * others.length)];
-
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-      localStream = stream;
-      document.getElementById('localVideo').srcObject = stream;
-
-      const call = peer.call(randomId, stream);
-      call.on('stream', (remoteStream) => {
-        document.getElementById('remoteVideo').srcObject = remoteStream;
-      });
-      currentCall = call;
-    });
+  database.ref("waiting_call").once("value").then(snap => {
+    const other = snap.val();
+    if (other && other !== peer.id) {
+      database.ref("waiting_call").remove();
+      startCall(other);
+    } else {
+      database.ref("waiting_call").set(peer.id).onDisconnect().remove();
+    }
   });
 }
+function startCall(id) {
+  const call = peer.call(id, localStream);
+  call.on("stream", stream => remoteVideo.srcObject = stream);
+  currentCall = call;
+}
 
-// Chat random peer
+// OUTGOING RANDOM CHAT
+btnChat.onclick = chatRandomPeer;
 function chatRandomPeer() {
-  database.ref('users').once('value').then(snapshot => {
-    const users = snapshot.val();
-    const others = Object.keys(users || {}).filter(uid => uid !== peer.id);
-    if (others.length === 0) return alert('No one is available to chat.');
-
-    const randomId = others[Math.floor(Math.random() * others.length)];
-    const conn = peer.connect(randomId);
-    setupConnection(conn);
+  database.ref("waiting_chat").once("value").then(snap => {
+    const other = snap.val();
+    if (other && other !== peer.id) {
+      database.ref("waiting_chat").remove();
+      setupChat(peer.connect(other));
+    } else {
+      database.ref("waiting_chat").set(peer.id).onDisconnect().remove();
+    }
   });
 }
 
-function setupConnection(conn) {
-  document.getElementById('chatBox').classList.remove('hidden');
-  conn.on('data', (data) => {
-    appendMessage(`Stranger: ${data}`);
-  });
-
-  document.getElementById('sendMessage').onclick = function () {
-    const input = document.getElementById('messageInput');
-    const msg = input.value.trim();
+// SETUP CHAT CONNECTION
+peer.on("connection", conn => setupChat(conn));
+function setupChat(conn) {
+  chatBox.classList.remove("hidden");
+  conn.on("data", data => appendMessage(`Stranger: ${data}`));
+  sendMessageBtn.onclick = () => {
+    const msg = messageInput.value.trim();
     if (!msg) return;
     conn.send(msg);
     appendMessage(`You: ${msg}`);
-    input.value = '';
+    messageInput.value = "";
   };
 }
 
-function appendMessage(msg) {
-  const messages = document.getElementById('messages');
-  const msgElem = document.createElement('div');
-  msgElem.textContent = msg;
-  messages.appendChild(msgElem);
+function appendMessage(txt) {
+  const div = document.createElement("div");
+  div.textContent = txt;
+  messagesDiv.appendChild(div);
 }

@@ -11,121 +11,108 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// PeerJS init
-const peer = new Peer(undefined, {
-  host: "wackachat-peer-server.onrender.com",
+// Initialize PeerJS
+let peer = new Peer({
+  host: 'your-peer-server.com',
   port: 9000,
-  path: "/",
-  key: "wackakey"
+  path: '/'
 });
 
-let localStream = null;
-let currentCall = null;
-let currentConn = null;
-
-// DOM elements
+let localStream, currentCall;
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const btnCall = document.getElementById("btnCall");
 const btnChat = document.getElementById("btnChat");
-const endCallBtn = document.getElementById("endCall");
-const onlineUsersDisplay = document.getElementById("onlineUsers");
+const btnEndCall = document.getElementById("btnEndCall");
+const onlineUsersDisplay = document.getElementById("onlineUserCount");
 const chatBox = document.getElementById("chatBox");
 const messagesDiv = document.getElementById("messages");
 const sendMessageBtn = document.getElementById("sendMessage");
 const messageInput = document.getElementById("messageInput");
 
-// Ensure local media is only initialized after interaction
-btnCall.addEventListener('click', () => {
-  initializeMediaIfNeeded().then(() => callRandomPeer());
+// Media access after user interaction
+document.getElementById('btnCall').addEventListener('click', () => {
+  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    .then(stream => {
+      localStream = stream;
+      localVideo.srcObject = stream;
+      localVideo.play();
+    })
+    .catch(error => {
+      console.error('Error accessing media devices.', error);
+    });
 });
-btnChat.addEventListener('click', () => {
-  initializeMediaIfNeeded().then(() => chatRandomPeer());
-});
-endCallBtn.addEventListener('click', endCall);
 
-function initializeMediaIfNeeded() {
-  return new Promise((resolve, reject) => {
-    if (localStream) return resolve();
-
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        localStream = stream;
-        localVideo.srcObject = stream;
-        localVideo.muted = true;
-        localVideo.play();
-        resolve();
-      })
-      .catch(err => {
-        alert("Permission denied or device not found.");
-        reject(err);
-      });
-  });
-}
-
-// Update online users
+// PeerJS open event
 peer.on("open", id => {
-  const userRef = database.ref(`users/${id}`);
-  userRef.set({ status: "online" });
-  userRef.onDisconnect().remove();
+  updateOnlineUserCount();
+});
 
+// Update the online user count
+function updateOnlineUserCount() {
   database.ref("users").on("value", snap => {
     const users = snap.val() || {};
     const count = Object.values(users).filter(u => u.status === "online").length;
-    onlineUsersDisplay.innerText = `Online: ${count}`;
+    onlineUsersDisplay.innerText = count;
   });
-});
+}
 
-// Handle incoming call
+// Handle incoming calls
 peer.on("call", call => {
   call.answer(localStream);
   call.on("stream", remoteStream => {
     remoteVideo.srcObject = remoteStream;
   });
-  currentCall = call;
 });
 
-// Handle incoming chat
-peer.on("connection", conn => {
-  setupChat(conn);
-});
-
-// Call Random Peer
-function callRandomPeer() {
+// Start a random call
+btnCall.onclick = function() {
   database.ref("waiting_call").once("value").then(snap => {
     const other = snap.val();
     if (other && other !== peer.id) {
       database.ref("waiting_call").remove();
-      const call = peer.call(other, localStream);
-      call.on("stream", stream => {
-        remoteVideo.srcObject = stream;
-      });
-      currentCall = call;
+      startCall(other);
     } else {
       database.ref("waiting_call").set(peer.id).onDisconnect().remove();
     }
   });
+};
+
+function startCall(id) {
+  const call = peer.call(id, localStream);
+  call.on("stream", stream => remoteVideo.srcObject = stream);
+  currentCall = call;
+  btnEndCall.style.display = "inline-block"; // Show End Call button
 }
 
-// Chat Random Peer
-function chatRandomPeer() {
+// End the call
+btnEndCall.onclick = function() {
+  if (currentCall) {
+    currentCall.close();
+    currentCall = null;
+    remoteVideo.srcObject = null;
+    btnEndCall.style.display = "none"; // Hide End Call button
+  }
+};
+
+// Handle random chat
+btnChat.onclick = function() {
   database.ref("waiting_chat").once("value").then(snap => {
     const other = snap.val();
     if (other && other !== peer.id) {
       database.ref("waiting_chat").remove();
-      const conn = peer.connect(other);
-      setupChat(conn);
+      setupChat(peer.connect(other));
     } else {
       database.ref("waiting_chat").set(peer.id).onDisconnect().remove();
     }
   });
-}
+};
 
-// Chat setup
+// Set up chat connection
+peer.on("connection", conn => setupChat(conn));
+
 function setupChat(conn) {
   chatBox.classList.remove("hidden");
-  currentConn = conn;
-
   conn.on("data", data => appendMessage(`Stranger: ${data}`));
   sendMessageBtn.onclick = () => {
     const msg = messageInput.value.trim();
@@ -136,44 +123,8 @@ function setupChat(conn) {
   };
 }
 
-function appendMessage(text) {
-  const msgDiv = document.createElement("div");
-  msgDiv.textContent = text;
-  messagesDiv.appendChild(msgDiv);
-}
-
-// End call logic
-function endCall() {
-  if (currentCall) {
-    currentCall.close();
-    currentCall = null;
-    remoteVideo.srcObject = null;
-  }
-  if (currentConn) {
-    currentConn.close();
-    currentConn = null;
-    chatBox.classList.add("hidden");
-  }
-}
-
-// Draggable local video
-localVideo.addEventListener("mousedown", dragMouseDown);
-function dragMouseDown(e) {
-  e.preventDefault();
-  let pos3 = e.clientX, pos4 = e.clientY;
-
-  function elementDrag(e) {
-    localVideo.style.top = (localVideo.offsetTop - (pos4 - e.clientY)) + "px";
-    localVideo.style.left = (localVideo.offsetLeft - (pos3 - e.clientX)) + "px";
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-  }
-
-  function stopDrag() {
-    document.removeEventListener("mousemove", elementDrag);
-    document.removeEventListener("mouseup", stopDrag);
-  }
-
-  document.addEventListener("mousemove", elementDrag);
-  document.addEventListener("mouseup", stopDrag);
+function appendMessage(txt) {
+  const div = document.createElement("div");
+  div.textContent = txt;
+  messagesDiv.appendChild(div);
 }

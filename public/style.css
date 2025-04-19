@@ -1,70 +1,72 @@
+/* Basic styles */
 body {
-  margin: 0;
-  font-family: sans-serif;
-  background-color: #1a1a1a;
-  color: white;
-  overflow: hidden;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
 }
 
 video {
-  background: black;
-  border-radius: 8px;
-}
-
-#remoteVideo {
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  z-index: 1;
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    border: 2px solid black;
+    margin-bottom: 10px;
 }
 
 #localVideo {
-  position: fixed;
-  width: 120px;
-  height: 90px;
-  bottom: 10px;
-  left: 10px;
-  z-index: 9999;
-  border: 2px solid #fff;
-  cursor: move;
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 120px;
+    border-radius: 10px;
 }
 
-.controls {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 999;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+#remoteVideo {
+    width: 100%;
 }
 
 button {
-  background: #444;
-  border: none;
-  padding: 10px;
-  color: white;
-  cursor: pointer;
-  border-radius: 5px;
+    margin: 10px;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
-#chatBox {
-  position: fixed;
-  right: 10px;
-  bottom: 10px;
-  width: 300px;
-  background: #2a2a2a;
-  border-radius: 8px;
-  padding: 10px;
-  z-index: 9999;
-}
-
-#messages {
-  max-height: 150px;
-  overflow-y: auto;
-  margin-bottom: 10px;
+button:hover {
+    background-color: #0056b3;
 }
 
 .hidden {
-  display: none;
+    display: none;
+}
+
+#chatBox {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 300px;
+    width: 100%;
+}
+
+#messages {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+#onlineUsers {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    font-size: 18px;
 }

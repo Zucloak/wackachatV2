@@ -7,16 +7,21 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
+
+  <!-- Fullscreen Remote Video -->
+  <video id="remoteVideo" autoplay></video>
+
+  <!-- Floating Local Video -->
+  <video id="localVideo" autoplay muted></video>
+
+  <!-- Controls + Chat -->
   <div class="container">
     <h1>Wackachat V2</h1>
-<p id="onlineCount">Online Users: 0</p>
-
-    <video id="localVideo" autoplay muted playsinline></video>
-    <video id="remoteVideo" autoplay playsinline></video>
 
     <div class="buttons">
       <button onclick="callRandomPeer()">Call Now</button>
       <button onclick="chatRandomPeer()">Chat Now</button>
+      <p id="onlineUsers">Online: 0</p>
     </div>
 
     <div id="chatBox" class="hidden">
@@ -24,20 +29,14 @@
       <input type="text" id="messageInput" placeholder="Type your message..." />
       <button onclick="sendMessage()">Send</button>
     </div>
-
-    <!-- Display Online Users -->
-    <div id="onlineUsers">
-      <h3>Online Users</h3>
-      <!-- List will be dynamically populated by JavaScript -->
-    </div>
   </div>
 
-  <!-- PeerJS client library -->
+  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <!-- Firebase compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <!-- Your application logic -->
-  <script src="/script.js"></script>
+
+  <!-- Main Script -->
+  <script src="script.js"></script>
 </body>
 </html>

@@ -11,40 +11,39 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// PeerJS init … 
-let peer = new Peer({ /* ... */ });
+// PeerJS init …
+let peer = new Peer({
+  host: 'your-app.onrender.com',  // Your Render URL
+  port: 9000,
+  path: '/',
+  secure: true,
+  key: 'wackakey'
+});
+
 let localStream, currentCall;
 
-// Grab the **correct** IDs
+// Grab the correct IDs
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const btnCall = document.getElementById("btnCall");
 const btnChat = document.getElementById("btnChat");
-const btnEndCall = document.getElementById("btnEndCall"); // End call button
 const onlineUsersDisplay = document.getElementById("onlineUsers");
 const chatBox = document.getElementById("chatBox");
 const messagesDiv = document.getElementById("messages");
 const sendMessageBtn = document.getElementById("sendMessage");
 const messageInput = document.getElementById("messageInput");
+const endCallBtn = document.getElementById("endCall");
 
 // Media access …
-navigator.mediaDevices.getUserMedia({
-  video: {
-    facingMode: "user", // Ensure front-facing camera on mobile
-    width: { ideal: 1280 },
-    height: { ideal: 720 }
-  },
-  audio: true
-})
+navigator.mediaDevices.getUserMedia({ video: true, audio: true })
   .then(stream => {
-    console.log("✅ Media stream initialized:", stream);
     localStream = stream;
     localVideo.srcObject = stream;
-  }).catch(err => console.error("🚫 Failed to access media devices:", err));
+    localVideo.style.display = "block";  // Ensure it's visible
+  }).catch(console.error);
 
 // When PeerJS opens …
 peer.on("open", id => {
-  // … register online user, onDisconnect, count, etc.
   updateOnlineUserCount();
 });
 
@@ -101,7 +100,6 @@ function chatRandomPeer() {
 
 // SETUP CHAT CONNECTION
 peer.on("connection", conn => setupChat(conn));
-
 function setupChat(conn) {
   chatBox.classList.remove("hidden");
   conn.on("data", data => appendMessage(`Stranger: ${data}`));
@@ -120,45 +118,54 @@ function appendMessage(txt) {
   messagesDiv.appendChild(div);
 }
 
-// END CALL FUNCTION
+// END CALL FUNCTIONALITY
+endCallBtn.onclick = endCall;
 function endCall() {
   if (currentCall) {
     currentCall.close();
     remoteVideo.srcObject = null;
-    currentCall = null;
-  }
-  // Optionally, also stop the local video stream when ending the call
-  if (localStream) {
-    localStream.getTracks().forEach(track => track.stop());
-    localVideo.srcObject = null;
+    localVideo.style.display = "block";  // Show local video again
   }
 }
 
-// Make local video draggable
-localVideo.addEventListener("mousedown", (e) => {
-  let offsetX = e.clientX - localVideo.offsetLeft;
-  let offsetY = e.clientY - localVideo.offsetTop;
+// DRAGGABLE LOCAL VIDEO FOR MOBILE USERS
+if (window.innerWidth <= 768) {  // Only on mobile devices
+  localVideo.style.position = 'absolute';
+  localVideo.style.top = '10px';
+  localVideo.style.left = '10px';
+  
+  localVideo.addEventListener('mousedown', dragStart, false);
+  localVideo.addEventListener('touchstart', dragStart, false);
 
-  function moveAt(e) {
-    localVideo.style.left = e.clientX - offsetX + "px";
-    localVideo.style.top = e.clientY - offsetY + "px";
+  let isDragging = false;
+  let offsetX = 0, offsetY = 0;
+
+  function dragStart(e) {
+    isDragging = true;
+    offsetX = e.clientX || e.touches[0].clientX;
+    offsetY = e.clientY || e.touches[0].clientY;
+    
+    document.addEventListener('mousemove', dragMove, false);
+    document.addEventListener('touchmove', dragMove, false);
+    document.addEventListener('mouseup', dragEnd, false);
+    document.addEventListener('touchend', dragEnd, false);
   }
 
-  function onMouseMove(e) {
-    moveAt(e);
+  function dragMove(e) {
+    if (isDragging) {
+      const x = (e.clientX || e.touches[0].clientX) - offsetX;
+      const y = (e.clientY || e.touches[0].clientY) - offsetY;
+
+      localVideo.style.left = `${x}px`;
+      localVideo.style.top = `${y}px`;
+    }
   }
 
-  document.addEventListener("mousemove", onMouseMove);
-
-  localVideo.onmouseup = () => {
-    document.removeEventListener("mousemove", onMouseMove);
-    localVideo.onmouseup = null;
-  };
-});
-
-// Add styles for draggable video in CSS
-localVideo.style.position = "absolute";
-localVideo.style.zIndex = "10"; // Ensures the local video is on top of other elements
-
-// Add Event Listener to End Call Button
-btnEndCall.addEventListener("click", endCall);
+  function dragEnd() {
+    isDragging = false;
+    document.removeEventListener('mousemove', dragMove, false);
+    document.removeEventListener('touchmove', dragMove, false);
+    document.removeEventListener('mouseup', dragEnd, false);
+    document.removeEventListener('touchend', dragEnd, false);
+  }
+}

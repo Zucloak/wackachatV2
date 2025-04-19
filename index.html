@@ -5,45 +5,131 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>WackaChat</title>
   <style>
+    /* Reset and base styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #0e0e0e;
-      color: #eee;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      color: #333;
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 2rem;
     }
+
+    h1 {
+      margin-bottom: 1.5rem;
+      color: #2c3e50;
+    }
+
+    .container {
+      background: #ffffff;
+      border: 1px solid #dcdcdc;
+      border-radius: 8px;
+      padding: 2rem;
+      max-width: 800px;
+      width: 100%;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .video-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+
     video {
-      width: 300px;
+      width: 48%;
       height: auto;
-      background: #333;
-      margin: 1rem;
+      background: #000;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
+
+    .chat-section {
+      margin-bottom: 1.5rem;
+    }
+
     textarea {
-      width: 300px;
+      width: 100%;
       height: 100px;
-      margin: 1rem 0;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
       resize: none;
+      font-size: 1rem;
     }
+
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
     button {
-      margin: 0.5rem;
-      padding: 10px 20px;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 4px;
+      background-color: #3498db;
+      color: #fff;
+      font-size: 1rem;
       cursor: pointer;
-      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    #status {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    @media (max-width: 600px) {
+      .video-section {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      video {
+        width: 100%;
+        margin-bottom: 1rem;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
   <h1>WackaChat</h1>
-  <video id="localVideo" autoplay muted></video>
-  <video id="remoteVideo" autoplay></video>
-  <textarea id="chatBox" placeholder="Chat here..."></textarea>
-  <div>
-    <button id="callNow">Call Now</button>
-    <button id="chatNow">Chat Now</button>
+  <div class="container">
+    <div class="video-section">
+      <video id="localVideo" autoplay muted></video>
+      <video id="remoteVideo" autoplay></video>
+    </div>
+    <div class="chat-section">
+      <textarea id="chatBox" placeholder="Type your message here..."></textarea>
+    </div>
+    <div class="button-group">
+      <button id="callNow">Call Now</button>
+      <button id="chatNow">Chat Now</button>
+    </div>
+    <p id="status">Initializing...</p>
   </div>
-  <p id="status"></p>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -53,23 +139,22 @@
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
-    // Firebase Config
+    // Firebase configuration
     const firebaseConfig = {
-      apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk",
-      authDomain: "wackachat.firebaseapp.com",
-      databaseURL: "https://wackachat-default-rtdb.firebaseio.com",
-      projectId: "wackachat",
-      storageBucket: "wackachat.appspot.com",
-      messagingSenderId: "344884471257",
-      appId: "1:344884471257:web:3d8dfb005128735ae7a5c8",
-      measurementId: "G-MZM4LSXWFG"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // PeerJS
+    // Initialize PeerJS
     const peer = new Peer();
     let currentCall = null;
     let conn = null;
@@ -131,23 +216,32 @@
 
         conn = peer.connect(peerId);
         conn.on('open', () => {
-          conn.send("Hello from " + peer.id);
-          chatBox.value += `\nYou: Hello from ${peer.id}`;
+          conn.send("Hello
+::contentReference[oaicite:0]{index=0}           conn.send("Hello there!");
+          chatBox.value += "\nConnected to a stranger.";
         });
+
         conn.on('data', data => {
           chatBox.value += `\nStranger: ${data}`;
         });
       });
     };
 
-    chatBox.addEventListener('keypress', e => {
-      if (e.key === 'Enter' && !e.shiftKey && conn && conn.open) {
-        const message = chatBox.value.split("\n").pop();
-        conn.send(message);
-        chatBox.value += `\nYou: ${message}`;
+    // Send message on Enter key
+    chatBox.addEventListener('keydown', e => {
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
+        const message = chatBox.value.trim();
+        if (message && conn?.open) {
+          conn.send(message);
+          chatBox.value += `\nYou: ${message}`;
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        chatBox.value = "";
       }
     });
   </script>
 </body>
 </html>
+
+ 

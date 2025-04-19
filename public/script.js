@@ -1,93 +1,118 @@
-// Firebase config (Yours)
+console.log('script.js loaded');
+
+// --- Your real Firebase config ---
 const firebaseConfig = {
-  apiKey: "AIzaSyB2n4SfsnOJFeSKuGZCL4B2jUJwJdkXjKo",
+  apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk",
   authDomain: "wackachat.firebaseapp.com",
-  databaseURL: "https://wackachat-default-rtdb.asia-southeast1.firebasedatabase.app",
+  databaseURL: "https://wackachat-default-rtdb.firebaseio.com",
   projectId: "wackachat",
   storageBucket: "wackachat.appspot.com",
-  messagingSenderId: "217389174841",
-  appId: "1:217389174841:web:7f3ebf3a56956c67f4e574"
+  messagingSenderId: "344884471257",
+  appId: "1:344884471257:web:3d8dfb005128735ae7a5c8",
+  measurementId: "G-MZM4LSXWFG"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// Initialize PeerJS to your Render server
 const peer = new Peer(undefined, {
-  host: 'wackachatv2peerserver.onrender.com',
+  host: 'wackachatv2peerserver.onrender.com', // your Render URL
   port: 443,
-  secure: true
+  path: '/',
+  secure: true,
+  key: 'wackakey'
 });
 
-let conn;
-let currentCall;
+let conn, currentCall;
 const messagesDiv = document.getElementById('messages');
 
 peer.on('open', id => {
-  console.log('My peer ID is:', id);
+  console.log('Peer opened with ID:', id);
   db.ref('waiting').push(id);
 });
 
 peer.on('call', call => {
+  console.log('Incoming call from', call.peer);
   navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     .then(stream => {
+      document.getElementById('localVideo').srcObject = stream;
       call.answer(stream);
       call.on('stream', remoteStream => {
         document.getElementById('remoteVideo').srcObject = remoteStream;
       });
-      document.getElementById('localVideo').srcObject = stream;
       currentCall = call;
-    });
+    })
+    .catch(err => console.error('getUserMedia error', err));
 });
 
 peer.on('connection', connection => {
+  console.log('Incoming chat connection from', connection.peer);
   conn = connection;
   conn.on('data', data => {
-    messagesDiv.innerHTML += `<div><b>Stranger:</b> ${data}</div>`;
+    messagesDiv.innerHTML += `<div><strong>Stranger:</strong> ${data}</div>`;
   });
   document.getElementById('chatBox').classList.remove('hidden');
 });
 
 function callRandomPeer() {
-  db.ref('waiting').once('value', snapshot => {
-    const peers = Object.entries(snapshot.val() || {}).filter(([k, v]) => v !== peer.id);
-    if (peers.length === 0) return alert('No available peers.');
-    const [key, targetId] = peers[Math.floor(Math.random() * peers.length)];
-    db.ref(`waiting/${key}`).remove();
+  console.log('callRandomPeer()');
+  db.ref('waiting').once('value')
+    .then(snapshot => {
+      const list = snapshot.val() || {};
+      const peers = Object.entries(list).filter(([k, id]) => id !== peer.id);
+      console.log('Available peers:', peers);
+      if (!peers.length) {
+        return alert('No available peers right now.');
+      }
+      const [key, targetId] = peers[Math.floor(Math.random() * peers.length)];
+      db.ref(`waiting/${key}`).remove();
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        const call = peer.call(targetId, stream);
-        call.on('stream', remoteStream => {
-          document.getElementById('remoteVideo').srcObject = remoteStream;
-        });
-        document.getElementById('localVideo').srcObject = stream;
-        currentCall = call;
-      });
-  });
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+          document.getElementById('localVideo').srcObject = stream;
+          const call = peer.call(targetId, stream);
+          call.on('stream', remoteStream => {
+            document.getElementById('remoteVideo').srcObject = remoteStream;
+          });
+          currentCall = call;
+        })
+        .catch(err => console.error('getUserMedia error', err));
+    })
+    .catch(err => console.error('Firebase read error', err));
 }
 
 function chatRandomPeer() {
-  db.ref('waiting').once('value', snapshot => {
-    const peers = Object.entries(snapshot.val() || {}).filter(([k, v]) => v !== peer.id);
-    if (peers.length === 0) return alert('No peers available.');
-    const [key, targetId] = peers[Math.floor(Math.random() * peers.length)];
-    db.ref(`waiting/${key}`).remove();
+  console.log('chatRandomPeer()');
+  db.ref('waiting').once('value')
+    .then(snapshot => {
+      const list = snapshot.val() || {};
+      const peers = Object.entries(list).filter(([k, id]) => id !== peer.id);
+      console.log('Available peers for chat:', peers);
+      if (!peers.length) {
+        return alert('No peers available for chat.');
+      }
+      const [key, targetId] = peers[Math.floor(Math.random() * peers.length)];
+      db.ref(`waiting/${key}`).remove();
 
-    conn = peer.connect(targetId);
-    conn.on('open', () => {
-      document.getElementById('chatBox').classList.remove('hidden');
-    });
-    conn.on('data', data => {
-      messagesDiv.innerHTML += `<div><b>Stranger:</b> ${data}</div>`;
-    });
-  });
+      conn = peer.connect(targetId);
+      conn.on('open', () => {
+        console.log('Chat connection open with', targetId);
+        document.getElementById('chatBox').classList.remove('hidden');
+      });
+      conn.on('data', data => {
+        messagesDiv.innerHTML += `<div><strong>Stranger:</strong> ${data}</div>`;
+      });
+    })
+    .catch(err => console.error('Firebase read error', err));
 }
 
 function sendMessage() {
-  const msg = document.getElementById('messageInput').value;
-  if (msg.trim() && conn?.open) {
+  const input = document.getElementById('messageInput');
+  const msg = input.value.trim();
+  if (msg && conn && conn.open) {
     conn.send(msg);
-    messagesDiv.innerHTML += `<div><b>You:</b> ${msg}</div>`;
-    document.getElementById('messageInput').value = '';
+    messagesDiv.innerHTML += `<div><strong>You:</strong> ${msg}</div>`;
+    input.value = '';
   }
 }

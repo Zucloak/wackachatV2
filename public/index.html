@@ -7,22 +7,20 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-
-  <!-- Fullscreen Remote Video -->
-  <video id="remoteVideo" autoplay playsinline></video>
-
-  <!-- Floating Local Video -->
-  <video id="localVideo" autoplay muted playsinline></video>
-
-  <!-- Controls + Chat -->
   <div class="container">
     <h1>Wackachat V2</h1>
 
-    <div class="buttons">
-      <!-- Added id attributes here -->
-      <button id="btnCall">Call Now</button>
-      <button id="btnChat">Chat Now</button>
-      <p id="onlineUsers">Online: 0</p>
+    <div class="video-wrapper">
+      <video id="remoteVideo" autoplay playsinline></video>
+      <video id="localVideo" autoplay muted playsinline></video>
+    </div>
+
+    <div class="info-panel">
+      <div id="onlineUsers">Online: 0</div>
+      <div class="buttons">
+        <button id="btnCall">Call Now</button>
+        <button id="btnChat">Chat Now</button>
+      </div>
     </div>
 
     <div id="chatBox" class="hidden">
@@ -32,12 +30,9 @@
     </div>
   </div>
 
-  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
-  <!-- Main Script -->
   <script src="/script.js"></script>
 </body>
 </html>

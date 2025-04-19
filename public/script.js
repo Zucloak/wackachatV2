@@ -8,16 +8,14 @@ const firebaseConfig = {
   messagingSenderId: "344884471257", // Replace with your messaging sender ID
   appId: "1:344884471257:web:3d8dfb005128735ae7a5c8" // Replace with your app ID
 };
-
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// PeerJS init …
-let peer = new Peer({ /* … */ });
+// Initialize PeerJS
+const peer = new Peer();
 let localStream, currentCall;
 
-// Grab the **correct** IDs
+// DOM references
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const btnCall = document.getElementById("btnCall");
@@ -28,20 +26,21 @@ const messagesDiv = document.getElementById("messages");
 const sendMessageBtn = document.getElementById("sendMessage");
 const messageInput = document.getElementById("messageInput");
 
-// Media access …
-navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-  .then(stream => {
-    localStream = stream;
-    localVideo.srcObject = stream;
-  }).catch(console.error);
+// Access media
+navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+  localStream = stream;
+  localVideo.srcObject = stream;
+}).catch(console.error);
 
-// When PeerJS opens …
+// PeerJS open
 peer.on("open", id => {
-  // … register online user, onDisconnect, count, etc.
+  const userRef = database.ref(`users/${id}`);
+  userRef.set({ name: `User-${id}`, status: "online" });
+  userRef.onDisconnect().remove();
   updateOnlineUserCount();
 });
 
-// COUNT ONLINE USERS
+// Count online users
 function updateOnlineUserCount() {
   database.ref("users").on("value", snap => {
     const users = snap.val() || {};
@@ -50,7 +49,7 @@ function updateOnlineUserCount() {
   });
 }
 
-// INCOMING CALL
+// Incoming call
 peer.on("call", call => {
   call.answer(localStream);
   call.on("stream", remoteStream => {
@@ -58,41 +57,42 @@ peer.on("call", call => {
   });
 });
 
-// OUTGOING RANDOM CALL
-btnCall.onclick = callRandomPeer;
-function callRandomPeer() {
+// Outgoing call
+btnCall.onclick = function callRandomPeer() {
   database.ref("waiting_call").once("value").then(snap => {
     const other = snap.val();
     if (other && other !== peer.id) {
       database.ref("waiting_call").remove();
       startCall(other);
     } else {
-      database.ref("waiting_call").set(peer.id).onDisconnect().remove();
+      database.ref("waiting_call").set(peer.id);
+      database.ref("waiting_call").onDisconnect().remove();
     }
   });
-}
+};
+
 function startCall(id) {
   const call = peer.call(id, localStream);
   call.on("stream", stream => remoteVideo.srcObject = stream);
   currentCall = call;
 }
 
-// OUTGOING RANDOM CHAT
-btnChat.onclick = chatRandomPeer;
-function chatRandomPeer() {
+// Outgoing chat
+btnChat.onclick = function chatRandomPeer() {
   database.ref("waiting_chat").once("value").then(snap => {
     const other = snap.val();
     if (other && other !== peer.id) {
       database.ref("waiting_chat").remove();
       setupChat(peer.connect(other));
     } else {
-      database.ref("waiting_chat").set(peer.id).onDisconnect().remove();
+      database.ref("waiting_chat").set(peer.id);
+      database.ref("waiting_chat").onDisconnect().remove();
     }
   });
-}
+};
 
-// SETUP CHAT CONNECTION
 peer.on("connection", conn => setupChat(conn));
+
 function setupChat(conn) {
   chatBox.classList.remove("hidden");
   conn.on("data", data => appendMessage(`Stranger: ${data}`));
@@ -110,3 +110,28 @@ function appendMessage(txt) {
   div.textContent = txt;
   messagesDiv.appendChild(div);
 }
+
+// Make local video draggable
+function makeDraggable(video) {
+  let isDragging = false, x = 0, y = 0;
+
+  video.addEventListener("touchstart", e => {
+    isDragging = true;
+    const touch = e.touches[0];
+    x = touch.clientX - video.offsetLeft;
+    y = touch.clientY - video.offsetTop;
+  });
+
+  video.addEventListener("touchmove", e => {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    video.style.left = `${touch.clientX - x}px`;
+    video.style.top = `${touch.clientY - y}px`;
+  });
+
+  video.addEventListener("touchend", () => {
+    isDragging = false;
+  });
+}
+
+makeDraggable(localVideo);

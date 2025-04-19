@@ -11,42 +11,59 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// PeerJS initialization
-let peer = new Peer({ 
-  host: 'your-app.onrender.com',  // Ensure this is the correct backend host
-  port: 9000, 
-  path: '/', 
-  secure: true, 
-  key: 'wackakey' 
+// ===== PEERJS INIT (Render-hosted) =====
+let peer = new Peer({
+  host: 'wackachat-peer-server.onrender.com', // Replace with your actual Render subdomain
+  port: 9000,
+  path: '/',
+  secure: true,
+  key: 'wackakey'
 });
 
-let localStream, currentCall, currentChat;
+let localStream, currentCall;
 
-// Grabbing DOM elements
+// ===== DOM REFERENCES =====
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const btnCall = document.getElementById("btnCall");
 const btnChat = document.getElementById("btnChat");
+const endCallBtn = document.getElementById("btnEndCall");
 const onlineUsersDisplay = document.getElementById("onlineUsers");
 const chatBox = document.getElementById("chatBox");
 const messagesDiv = document.getElementById("messages");
 const sendMessageBtn = document.getElementById("sendMessage");
 const messageInput = document.getElementById("messageInput");
 
-// Accessing the user's media
+// ===== GET USER MEDIA =====
 navigator.mediaDevices.getUserMedia({ video: true, audio: true })
   .then(stream => {
     localStream = stream;
     localVideo.srcObject = stream;
-  }).catch(console.error);
+    makeLocalVideoDraggable();
+  }).catch(err => {
+    alert("Camera or mic access denied.");
+    console.error(err);
+  });
 
-// When PeerJS opens
+// ===== PEER EVENTS =====
 peer.on("open", id => {
-  // Update Firebase database with online status
+  const userRef = database.ref("users/" + id);
+  userRef.set({ status: "online" });
+  userRef.onDisconnect().remove();
   updateOnlineUserCount();
 });
 
-// Count online users
+peer.on("call", call => {
+  call.answer(localStream);
+  currentCall = call;
+  call.on("stream", stream => {
+    remoteVideo.srcObject = stream;
+  });
+});
+
+peer.on("connection", conn => setupChat(conn));
+
+// ===== UPDATE ONLINE COUNT =====
 function updateOnlineUserCount() {
   database.ref("users").on("value", snap => {
     const users = snap.val() || {};
@@ -55,54 +72,50 @@ function updateOnlineUserCount() {
   });
 }
 
-// Handling incoming call
-peer.on("call", call => {
-  call.answer(localStream);
-  call.on("stream", remoteStream => {
-    remoteVideo.srcObject = remoteStream;
-  });
-});
-
-// Start a random call
-btnCall.onclick = callRandomPeer;
-function callRandomPeer() {
+// ===== RANDOM CALL LOGIC =====
+btnCall.onclick = () => {
   database.ref("waiting_call").once("value").then(snap => {
     const other = snap.val();
     if (other && other !== peer.id) {
       database.ref("waiting_call").remove();
       startCall(other);
     } else {
-      database.ref("waiting_call").set(peer.id).onDisconnect().remove();
+      database.ref("waiting_call").set(peer.id);
+      database.ref("waiting_call").onDisconnect().remove();
     }
+  });
+};
+
+function startCall(id) {
+  const call = peer.call(id, localStream);
+  currentCall = call;
+  call.on("stream", stream => {
+    remoteVideo.srcObject = stream;
   });
 }
 
-// Start the call with the other peer
-function startCall(id) {
-  const call = peer.call(id, localStream);
-  call.on("stream", stream => remoteVideo.srcObject = stream);
-  currentCall = call;
-}
-
-// Start a random chat
-btnChat.onclick = chatRandomPeer;
-function chatRandomPeer() {
+// ===== RANDOM CHAT LOGIC =====
+btnChat.onclick = () => {
   database.ref("waiting_chat").once("value").then(snap => {
     const other = snap.val();
     if (other && other !== peer.id) {
       database.ref("waiting_chat").remove();
       setupChat(peer.connect(other));
     } else {
-      database.ref("waiting_chat").set(peer.id).onDisconnect().remove();
+      database.ref("waiting_chat").set(peer.id);
+      database.ref("waiting_chat").onDisconnect().remove();
     }
   });
-}
+};
 
-// Setup chat connection
-peer.on("connection", conn => setupChat(conn));
+// ===== CHAT SETUP =====
 function setupChat(conn) {
   chatBox.classList.remove("hidden");
-  conn.on("data", data => appendMessage(`Stranger: ${data}`));
+
+  conn.on("data", data => {
+    appendMessage(`Stranger: ${data}`);
+  });
+
   sendMessageBtn.onclick = () => {
     const msg = messageInput.value.trim();
     if (!msg) return;
@@ -112,21 +125,52 @@ function setupChat(conn) {
   };
 }
 
-// Append chat message
 function appendMessage(txt) {
   const div = document.createElement("div");
   div.textContent = txt;
   messagesDiv.appendChild(div);
 }
 
-// End the call
-function endCall() {
+// ===== END CALL FUNCTION =====
+endCallBtn.onclick = () => {
   if (currentCall) {
     currentCall.close();
+    currentCall = null;
     remoteVideo.srcObject = null;
   }
-  if (currentChat) {
-    currentChat.close();
-    chatBox.classList.add("hidden");
-  }
+};
+
+// ===== MAKE LOCAL VIDEO DRAGGABLE ON MOBILE & DESKTOP =====
+function makeLocalVideoDraggable() {
+  localVideo.style.position = "absolute";
+  localVideo.style.zIndex = 1000;
+  localVideo.style.cursor = "move";
+
+  let offsetX, offsetY, dragging = false;
+
+  const startDrag = e => {
+    dragging = true;
+    const rect = localVideo.getBoundingClientRect();
+    offsetX = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    offsetY = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+  };
+
+  const duringDrag = e => {
+    if (!dragging) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const y = e.touches ? e.touches[0].clientY : e.clientY;
+    localVideo.style.left = `${x - offsetX}px`;
+    localVideo.style.top = `${y - offsetY}px`;
+  };
+
+  const endDrag = () => dragging = false;
+
+  localVideo.addEventListener("mousedown", startDrag);
+  localVideo.addEventListener("mousemove", duringDrag);
+  localVideo.addEventListener("mouseup", endDrag);
+  localVideo.addEventListener("mouseleave", endDrag);
+
+  localVideo.addEventListener("touchstart", startDrag);
+  localVideo.addEventListener("touchmove", duringDrag);
+  localVideo.addEventListener("touchend", endDrag);
 }

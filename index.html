@@ -99,7 +99,8 @@
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
 
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <!-- Using the correct PeerJS CDN -->
+  <script src="https://cdn.peerjs.com/1.5.2/peer.min.js"></script>
 
   <script>
     // Firebase configuration
@@ -147,6 +148,12 @@
         window.callRandomPeer = function () {
           const waitingRef = db.ref('waiting');
           const myPeerId = peer.id;
+
+          // Check if peer ID is available before proceeding
+          if (!myPeerId) {
+            alert("Failed to get your peer ID. Please try again.");
+            return;
+          }
 
           // Add current user to "waiting" node
           waitingRef.child(myPeerId).set({

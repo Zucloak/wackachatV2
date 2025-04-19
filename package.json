@@ -1,14 +1,17 @@
 {
   "name": "wackachatV2",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "index.js", // or "server.js", depending on your entry file
   "scripts": {
-    "start": "node index.js",  // or "node server.js" if you're using that as the entry point
-    "dev": "nodemon index.js"  // or "nodemon server.js"
+    "start": "node index.js",  // or "node server.js" if that's your entry file
+    "dev": "nodemon index.js"  // Optional: for local development with live reload
   },
   "dependencies": {
-    "peerjs": "^0.0.0",
-    "firebase": "^9.0.0", // Add necessary dependencies
-    "express": "^4.0.0"  // Add Express or other dependencies if needed
+    "express": "^4.17.1",
+    "peerjs": "^0.0.0",   // or any other dependencies you need for your app
+    "firebase": "^9.0.0"
+  },
+  "engines": {
+    "node": "16.x"   // Specify your Node.js version
   }
 }

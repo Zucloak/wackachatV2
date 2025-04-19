@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wackachat</title>
   <style>
+    /* Styling for the page remains the same */
     * {
       margin: 0;
       padding: 0;
@@ -95,12 +96,12 @@
     </div>
   </div>
 
-  <!-- Using Firebase SDK v8.x to avoid module issues -->
+  <!-- Firebase SDK v8.x -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
 
-  <!-- Using the correct PeerJS CDN -->
-  <script src="https://cdn.peerjs.com/1.5.2/peer.min.js"></script>
+  <!-- PeerJS -->
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peer.min.js"></script>
 
   <script>
     // Firebase configuration
@@ -187,8 +188,7 @@
       });
 
     peer.on('open', id => {
-      console.log('Your PeerJS ID:', id);
-      alert(`Your Wackachat ID: ${id}`);
+      console.log('My peer ID is: ' + id);
     });
   </script>
 </body>

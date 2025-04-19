@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+<<<<<<< Updated upstream
   "start": "peerjs --port 9000 --key wackakey"
 }
 
+=======
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+>>>>>>> Stashed changes
   },
   "repository": {
     "type": "git",
@@ -18,10 +23,20 @@
     "url": "https://github.com/Zucloak/wackachatV2/issues"
   },
   "homepage": "https://github.com/Zucloak/wackachatV2#readme",
+<<<<<<< Updated upstream
   "description": "",
   "dependencies": {
     "express": "^5.1.0",
     "firebase": "^11.6.0",
+=======
+  "dependencies": {
+    "express": "^5.1.0",
+    "firebase": "^11.6.0",
+    "peer": "^1.0.2"
+  },
+  "description": "",
+  "devDependencies": {
+>>>>>>> Stashed changes
     "peerjs": "^1.5.4"
   }
 }

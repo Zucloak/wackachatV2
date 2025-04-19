@@ -1,146 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wackachat</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Link to your CSS file -->
-    <script src="https://cdn.jsdelivr.net/npm/firebase@9.0.0/dist/firebase-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/firebase@9.0.0/dist/firebase-database.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wackachat V2</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="container">
+    <h1>Wackachat V2</h1>
+    <video id="localVideo" autoplay muted></video>
+    <video id="remoteVideo" autoplay></video>
 
-    <div class="chat-container">
-        <h1>Welcome to Wackachat</h1>
-
-        <div id="user-info">
-            <p id="peer-id">My Peer ID: <span></span></p>
-        </div>
-
-        <button id="call-now" class="button">Call Now</button>
-        <button id="chat-now" class="button">Chat Now</button>
-
-        <div id="call-container">
-            <p>Connecting...</p>
-            <video id="remote-video" autoplay></video>
-            <video id="local-video" autoplay muted></video>
-        </div>
-
-        <div id="chat-container">
-            <div id="chat-box">
-                <!-- Random chat will appear here -->
-            </div>
-            <input type="text" id="chat-input" placeholder="Type a message...">
-            <button id="send-chat" class="button">Send</button>
-        </div>
-
+    <div class="buttons">
+      <button onclick="callRandomPeer()">Call Now</button>
+      <button onclick="chatRandomPeer()">Chat Now</button>
     </div>
 
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk",
-            authDomain: "wackachat.firebaseapp.com",
-            databaseURL: "https://wackachat-default-rtdb.firebaseio.com",
-            projectId: "wackachat",
-            storageBucket: "wackachat.firebasestorage.app",
-            messagingSenderId: "344884471257",
-            appId: "1:344884471257:web:3d8dfb005128735ae7a5c8",
-            measurementId: "G-MZM4LSXWFG"
-        };
+    <div id="chatBox" class="hidden">
+      <div id="messages"></div>
+      <input type="text" id="messageInput" placeholder="Type your message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
 
-        // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
-        // PeerJS server configuration
-        const peer = new Peer(undefined, {
-            host: 'wackachatv2peerserver.onrender.com',
-            port: 9000,
-            path: '/peerjs'
-        });
-
-        const localVideo = document.getElementById('local-video');
-        const remoteVideo = document.getElementById('remote-video');
-        const callNowButton = document.getElementById('call-now');
-        const chatNowButton = document.getElementById('chat-now');
-        const chatBox = document.getElementById('chat-box');
-        const chatInput = document.getElementById('chat-input');
-        const sendChatButton = document.getElementById('send-chat');
-
-        let myPeerId = '';
-        let peerConnection = null;
-
-        // Get user media for video
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-            .then(stream => {
-                localVideo.srcObject = stream;
-            })
-            .catch(error => {
-                console.log("Error getting user media:", error);
-            });
-
-        // PeerJS events
-        peer.on('open', id => {
-            myPeerId = id;
-            document.querySelector("#peer-id span").textContent = myPeerId;
-            console.log('My Peer ID is: ' + myPeerId);
-        });
-
-        // Handle incoming call
-        peer.on('call', incomingCall => {
-            incomingCall.answer(localVideo.srcObject);
-            incomingCall.on('stream', remoteStream => {
-                remoteVideo.srcObject = remoteStream;
-            });
-        });
-
-        // Call random peer function
-        callNowButton.onclick = function () {
-            const randomPeerId = generateRandomPeerId(); // Generate or fetch random Peer ID
-            const stream = localVideo.srcObject;
-            const call = peer.call(randomPeerId, stream);
-
-            call.on('stream', remoteStream => {
-                remoteVideo.srcObject = remoteStream;
-            });
-        };
-
-        // Random chat function
-        chatNowButton.onclick = function () {
-            const randomPeerId = generateRandomPeerId(); // Generate or fetch random Peer ID
-            const chatRef = database.ref('chats/' + randomPeerId);
-
-            chatRef.on('child_added', function (snapshot) {
-                const message = snapshot.val();
-                const messageDiv = document.createElement('div');
-                messageDiv.textContent = message.text;
-                chatBox.appendChild(messageDiv);
-            });
-        };
-
-        // Send message in random chat
-        sendChatButton.onclick = function () {
-            const messageText = chatInput.value;
-            const randomPeerId = generateRandomPeerId(); // Generate or fetch random Peer ID
-            const chatRef = database.ref('chats/' + randomPeerId);
-
-            chatRef.push({
-                text: messageText,
-                sender: myPeerId
-            });
-
-            chatInput.value = '';
-        };
-
-        // Generate random peer ID (replace with a proper ID generation or selection logic)
-        function generateRandomPeerId() {
-            const randomId = 'peer' + Math.floor(Math.random() * 100000);
-            return randomId;
-        }
-
-    </script>
-
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

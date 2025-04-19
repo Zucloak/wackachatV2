@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Wackachat</title>
   <style>
     body {
@@ -105,13 +107,13 @@
   <script>
     // Firebase Config
     const firebaseConfig = {
-      apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk",
-      authDomain: "wackachat.firebaseapp.com",
-      databaseURL: "https://wackachat-default-rtdb.firebaseio.com",
-      projectId: "wackachat",
-      storageBucket: "wackachat.appspot.com",
-      messagingSenderId: "344884471257",
-      appId: "1:344884471257:web:3d8dfb005128735ae7a5c8"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -124,10 +126,9 @@
     peer.on('open', id => {
       console.log('My Peer ID:', id);
       document.title = "ID: " + id;
-      findPartner(id);
     });
 
-    function findPartner(id) {
+    function findPartner(id, type) {
       const waitingRef = db.ref('waiting');
       waitingRef.once('value', snapshot => {
         const data = snapshot.val();
@@ -135,7 +136,7 @@
 
         for (let key in data) {
           if (data[key] !== id) {
-            startConnection(data[key]);
+            startConnection(data[key], type);
             db.ref('waiting/' + key).remove();
             found = true;
             break;
@@ -150,14 +151,14 @@
     }
 
     function callRandomPeer() {
-      findPartner(peer.id);
+      findPartner(peer.id, 'video');
     }
 
     function chatRandomPeer() {
-      findPartner(peer.id);
+      findPartner(peer.id, 'chat');
     }
 
-    function startConnection(partnerId) {
+    function startConnection(partnerId, type) {
       conn = peer.connect(partnerId);
       conn.on('open', () => {
         conn.on('data', data => {
@@ -165,10 +166,15 @@
         });
       });
 
-      call = peer.call(partnerId, getUserMediaStream());
-      call.on('stream', stream => {
-        document.getElementById('remoteVideo').srcObject = stream;
-      });
+      if (type === 'video') {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+          document.getElementById('localVideo').srcObject = stream;
+          call = peer.call(partnerId, stream);
+          call.on('stream', remoteStream => {
+            document.getElementById('remoteVideo').srcObject = remoteStream;
+          });
+        });
+      }
     }
 
     peer.on('connection', connection => {
@@ -187,10 +193,6 @@
         });
       });
     });
-
-    function getUserMediaStream() {
-      return navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    }
 
     function sendMessage() {
       const input = document.getElementById('chatInput');

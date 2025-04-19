@@ -2,190 +2,133 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Wackachat</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
     body {
-      background: radial-gradient(circle at top left, #111 0%, #000 100%);
-      color: #ffffffcc;
-      height: 100vh;
+      font-family: 'SF Pro Display', sans-serif;
+      background: #000;
+      color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 2rem;
-    }
-    .container {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(20px);
-      border-radius: 20px;
-      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
-      padding: 2rem;
-      width: 100%;
-      max-width: 600px;
-      display: flex;
+      height: 100vh;
       flex-direction: column;
-      gap: 1.5rem;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .title {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #ffffff;
-      text-align: center;
-      letter-spacing: 1px;
-    }
-    .video-container {
-      display: flex;
-      justify-content: space-between;
       gap: 1rem;
     }
     video {
-      width: 48%;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      width: 300px;
+      border-radius: 10px;
+      margin: 0 10px;
+      border: 1px solid #444;
     }
     .button {
-      padding: 0.9rem 1.5rem;
-      background: linear-gradient(135deg, #0a84ff, #007aff);
+      padding: 0.8rem 1.5rem;
+      background: #007bff;
+      color: white;
       border: none;
-      border-radius: 12px;
-      color: #fff;
-      font-weight: 600;
-      font-size: 1rem;
+      border-radius: 8px;
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.3s ease;
-      box-shadow: 0 4px 12px rgba(10, 132, 255, 0.4);
     }
     .button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(10, 132, 255, 0.6);
-    }
-    .input-group {
-      display: flex;
-      gap: 0.5rem;
-    }
-    input {
-      flex: 1;
-      padding: 0.8rem;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.05);
-      color: white;
+      background: #0056b3;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="title">Wackachat 🎥</div>
 
-    <div class="video-container">
-      <video id="my-video" autoplay muted playsinline></video>
-      <video id="user-video" autoplay playsinline></video>
-    </div>
-
-    <div class="input-group">
-      <input type="text" id="peer-id" placeholder="Press Call Now to start random chat...">
-      <button class="button" onclick="callRandomPeer()">Call Now</button>
-    </div>
+  <h1>Wackachat 🎥</h1>
+  <div>
+    <video id="my-video" autoplay muted playsinline></video>
+    <video id="user-video" autoplay playsinline></video>
   </div>
+  <button class="button" onclick="callRandomPeer()">Call Now</button>
 
-  <!-- Firebase SDK v8.x -->
+  <!-- Firebase v8 SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
 
-  <!-- PeerJS -->
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peer.min.js"></script>
+  <!-- PeerJS - WORKING CDN -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
-    // Firebase configuration
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBHz_pnME24A3YalXA8OqlfJXY_fKCSpNk",
       authDomain: "wackachat.firebaseapp.com",
       databaseURL: "https://wackachat-default-rtdb.firebaseio.com",
       projectId: "wackachat",
-      storageBucket: "wackachat.firebasestorage.app",
+      storageBucket: "wackachat.appspot.com",
       messagingSenderId: "344884471257",
-      appId: "1:344884471257:web:3d8dfb005128735ae7a5c8",
-      measurementId: "G-MZM4LSXWFG"
+      appId: "1:344884471257:web:3d8dfb005128735ae7a5c8"
     };
 
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const peer = new Peer({
-      host: 'peerjs.com',
-      secure: true,
-      port: 443
-    });
-
     const myVideo = document.getElementById('my-video');
     const userVideo = document.getElementById('user-video');
-    const peerIdInput = document.getElementById('peer-id');
 
     let localStream;
+    let peer = null;
 
+    // Setup media and Peer connection
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then(stream => {
         localStream = stream;
         myVideo.srcObject = stream;
-        myVideo.play();
 
-        peer.on('call', call => {
-          call.answer(stream);
-          call.on('stream', remoteStream => {
-            userVideo.srcObject = remoteStream;
-            userVideo.play();
+        peer = new Peer(); // Auto-generates ID
+
+        peer.on('open', id => {
+          console.log("My Peer ID: " + id);
+
+          // Listen for incoming calls
+          peer.on('call', call => {
+            call.answer(localStream);
+            call.on('stream', userStream => {
+              userVideo.srcObject = userStream;
+            });
           });
         });
 
-        // This function will be called when the Call Now button is clicked
-        window.callRandomPeer = function () {
-          const waitingRef = db.ref('waiting');
-          const myPeerId = peer.id;
-
-          if (!myPeerId) {
-            alert("Failed to get your peer ID. Please try again.");
-            return;
-          }
-
-          waitingRef.child(myPeerId).set({
-            peerId: myPeerId,
-            timestamp: Date.now()
-          }).then(() => {
-            console.log("You are now in the waiting pool.");
-
-            waitingRef.orderByChild('timestamp').limitToFirst(1).once('child_added', function(snapshot) {
-              const matchedPeer = snapshot.val();
-
-              if (matchedPeer.peerId !== myPeerId) {
-                alert('Found a peer to chat with!');
-                const call = peer.call(matchedPeer.peerId, localStream);
-                call.on('stream', remoteStream => {
-                  userVideo.srcObject = remoteStream;
-                  userVideo.play();
-                });
-
-                waitingRef.child(matchedPeer.peerId).remove();
-              }
-            });
-          });
-        };
       })
       .catch(error => {
         console.error('Media error:', error);
-        alert('Failed to access your camera and microphone. Please allow permissions and reload the page.');
+        alert('Camera/Mic access failed. Please allow and reload.');
       });
 
-    peer.on('open', id => {
-      console.log('My peer ID is: ' + id);
-    });
+    // Global call function
+    function callRandomPeer() {
+      if (!peer || !peer.id) {
+        alert("Peer connection not ready yet. Please wait...");
+        return;
+      }
+
+      const waitingRef = db.ref('waiting');
+      const myID = peer.id;
+
+      waitingRef.once('value', snapshot => {
+        const peers = snapshot.val() || {};
+        const availablePeers = Object.keys(peers).filter(id => id !== myID);
+
+        if (availablePeers.length > 0) {
+          const randomPeerID = availablePeers[Math.floor(Math.random() * availablePeers.length)];
+          console.log("Calling: " + randomPeerID);
+          const call = peer.call(randomPeerID, localStream);
+
+          call.on('stream', userStream => {
+            userVideo.srcObject = userStream;
+          });
+
+          db.ref('waiting/' + randomPeerID).remove();
+        } else {
+          waitingRef.child(myID).set({ timestamp: Date.now() });
+          alert("No peers available. You're now waiting to be called.");
+        }
+      });
+    }
   </script>
 </body>
 </html>

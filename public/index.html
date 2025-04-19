@@ -4,13 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wackachat V2</title>
-  <link rel="stylesheet" href="style.css" />
+  <!-- Absolute path ensures it’s loaded from /public/style.css -->
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <div class="container">
     <h1>Wackachat V2</h1>
-    <video id="localVideo" autoplay muted></video>
-    <video id="remoteVideo" autoplay></video>
+    <video id="localVideo" autoplay muted playsinline></video>
+    <video id="remoteVideo" autoplay playsinline></video>
 
     <div class="buttons">
       <button onclick="callRandomPeer()">Call Now</button>
@@ -24,9 +25,12 @@
     </div>
   </div>
 
+  <!-- PeerJS client -->
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <!-- Firebase compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script src="script.js"></script>
+  <!-- Your application logic -->
+  <script src="/script.js"></script>
 </body>
 </html>

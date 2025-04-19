@@ -1,0 +1,25 @@
+{
+  "name": "wackachatv2",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zucloak/wackachatV2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Zucloak/wackachatV2/issues"
+  },
+  "homepage": "https://github.com/Zucloak/wackachatV2#readme",
+  "description": "",
+  "dependencies": {
+    "express": "^5.1.0",
+    "firebase": "^11.6.0",
+    "peerjs": "^1.5.4"
+  }
+}
